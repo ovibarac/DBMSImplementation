@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<Databases>
+  <DataBase dataBaseName="db">
+    <Tables>
+      <Table fileName="Orders.kv" tableName="Orders">
+        <Structure>
+          <Attribute attributeName="orderId" type="INT"/>
+          <Attribute attributeName="userId" type="INT"/>
+        </Structure>
+        <primaryKey>
+          <pkAttribute>orderId</pkAttribute>
+        </primaryKey>
+        <foreignKeys>
+          <foreignKey>
+            <fkAttribute>userId</fkAttribute>
+            <references>
+              <refTable>Users</refTable>
+              <refAttribute>id</refAttribute>
+            </references>
+          </foreignKey>
+        </foreignKeys>
+      </Table>
+      <Table fileName="disciplines.kv" tableName="disciplines">
+        <Structure>
+          <Attribute attributeName="DiscID" type="varchar(5)"/>
+          <Attribute attributeName="DName" type="varchar(20)"/>
+          <Attribute attributeName="CreditNr" type="int"/>
+        </Structure>
+      </Table>
+    </Tables>
+  </DataBase>
+  <DataBase dataBaseName="db2">
+    <Tables>
+      <Table fileName="A.kv" tableName="A">
+        <Structure>
+          <Attribute attributeName="id" type="INT"/>
+          <Attribute attributeName="userId" type="INT"/>
+        </Structure>
+        <primaryKey>
+          <pkAttribute>orderId</pkAttribute>
+        </primaryKey>
+        <foreignKeys>
+          <foreignKey>
+            <fkAttribute>userId</fkAttribute>
+            <references>
+              <refTable>Users</refTable>
+              <refAttribute>id</refAttribute>
+            </references>
+          </foreignKey>
+        </foreignKeys>
+      </Table>
+    </Tables>
+  </DataBase>
+</Databases>
