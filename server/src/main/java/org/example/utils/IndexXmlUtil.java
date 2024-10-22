@@ -29,6 +29,7 @@ public class IndexXmlUtil {
 
   public static NodeList findIndexElements(Document doc, String databaseName, String tableName) throws Exception {
     Element tableElement = TableXmlUtil.findTableElement(doc, databaseName, tableName);
-    return XmlUtil.getAllChildElements(doc, tableElement, "IndexFiles");
+    Element indexes = (Element) XmlUtil.getAllChildElements(doc, tableElement, "IndexFiles").item(0);
+    return XmlUtil.getAllChildElements(doc,indexes,"IndexFile");
   }
 }
