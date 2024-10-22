@@ -40,8 +40,13 @@
               <IAttribute>DName</IAttribute>
             </IndexAttributes>
           </IndexFile>
+          <IndexFile indexName="idx_CreditNr.ind" indexType="BTree" isUnique="0">
+            <IndexAttributes>
+              <IAttribute>CreditNr</IAttribute>
+            </IndexAttributes>
+          </IndexFile>
         </IndexFiles>
       </Table>
     </Tables>
   </DataBase>
-</Databases>
+</Databases>

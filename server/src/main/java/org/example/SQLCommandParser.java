@@ -167,7 +167,7 @@ public class SQLCommandParser {
     try {
       boolean isUnique = sqlCommand.matches("(?i)CREATE UNIQUE INDEX .*");
 
-      Pattern pattern = Pattern.compile("(?i)CREATE (UNIQUE )?INDEX (\\S+) ON (\\S+) \\(([^)]+)\\)");
+      Pattern pattern = Pattern.compile("(?i)CREATE (UNIQUE )?INDEX (\\w+) ON (\\w+) \\(([^)]+)\\)");
       Matcher matcher = pattern.matcher(sqlCommand);
       if (!matcher.find()) {
         return "Invalid CREATE INDEX syntax.";

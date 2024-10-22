@@ -86,4 +86,16 @@ public class TableXmlUtil {
     foreignKey.appendChild(references);
     fkElement.appendChild(foreignKey);
   }
+
+  public static boolean findColumn(Document doc, String databaseName, String tableName, String column) throws Exception {
+    Element attributes = (Element) findTableElement(doc, databaseName, tableName).getElementsByTagName("Structure").item(0);
+    NodeList columns = XmlUtil.getAllChildElements(doc, attributes, "Attribute");
+    for (int i = 0; i < columns.getLength(); i++) {
+      Element elem = (Element) columns.item(i);
+      String c = elem.getAttribute("attributeName");
+      if (c.equals(column))
+        return true;
+    }
+    return false;
+  }
 }

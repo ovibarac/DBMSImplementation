@@ -3,10 +3,13 @@ package org.example.repo;
 import org.example.model.Column;
 import org.example.model.ForeignKey;
 import org.example.utils.DatabaseXmlUtil;
+import org.example.utils.IndexXmlUtil;
 import org.example.utils.TableXmlUtil;
 import org.example.utils.XmlUtil;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
+import org.w3c.dom.NodeList;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -41,6 +44,17 @@ public class TableRepository {
     Document doc = XmlUtil.loadXmlFile(DatabaseConfig.XML_FILE_PATH);
 
     Element tableElement = TableXmlUtil.findTableElement(doc, databaseName, tableName);
+    NodeList indexes = IndexXmlUtil.findIndexElements(doc, databaseName, tableName);
+
+    for(int i = 0; i< indexes.getLength(); i++){
+      Element node = (Element) indexes.item(i);
+      String indexName = node.getAttribute("indexName");
+      File indexFile = new File(indexName);
+      if(indexFile.exists()){
+        indexFile.delete();
+        System.out.println("Delete index file: "+indexFile);
+      }
+    }
 
     tableElement.getParentNode().removeChild(tableElement);
     XmlUtil.writeXmlFile(doc, DatabaseConfig.XML_FILE_PATH);
@@ -51,6 +65,5 @@ public class TableRepository {
       kvFile.delete();
       System.out.println("Deleted table file: " + tableFileName);
     }
-    //TODO delete index files for table
   }
 }

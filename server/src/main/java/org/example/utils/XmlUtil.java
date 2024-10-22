@@ -16,6 +16,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.util.List;
 
 public class XmlUtil {
   public static Document loadXmlFile(String filePath) throws Exception {
@@ -83,5 +84,9 @@ public class XmlUtil {
       parent.appendChild(childElement);
       return childElement;
     }
+  }
+
+  public static NodeList getAllChildElements(Document doc, Element parent, String childName) {
+    return parent.getElementsByTagName(childName);
   }
 }

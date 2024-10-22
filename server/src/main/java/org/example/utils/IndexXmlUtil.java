@@ -2,6 +2,7 @@ package org.example.utils;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
 
 import java.util.List;
 
@@ -24,5 +25,11 @@ public class IndexXmlUtil {
 
     indexFileElement.appendChild(indexAttributesElement);
     indexFilesElement.appendChild(indexFileElement);
+  }
+
+  public static NodeList findIndexElements(Document doc, String databaseName, String tableName) throws Exception {
+    Element tableElement = TableXmlUtil.findTableElement(doc, databaseName, tableName);
+
+    return XmlUtil.getAllChildElements(doc, tableElement, "IndexFiles");
   }
 }
