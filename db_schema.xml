@@ -19,6 +19,13 @@
             </references>
           </foreignKey>
         </foreignKeys>
+        <IndexFiles>
+          <IndexFile indexName="idx_orderid.ind" indexType="BTree" isUnique="0">
+            <IndexAttributes>
+              <IAttribute>orderId</IAttribute>
+            </IndexAttributes>
+          </IndexFile>
+        </IndexFiles>
       </Table>
       <Table fileName="disciplines.kv" tableName="disciplines">
         <Structure>
@@ -26,28 +33,14 @@
           <Attribute attributeName="DName" type="varchar(20)"/>
           <Attribute attributeName="CreditNr" type="int"/>
         </Structure>
-      </Table>
-    </Tables>
-  </DataBase>
-  <DataBase dataBaseName="db2">
-    <Tables>
-      <Table fileName="A.kv" tableName="A">
-        <Structure>
-          <Attribute attributeName="id" type="INT"/>
-          <Attribute attributeName="userId" type="INT"/>
-        </Structure>
-        <primaryKey>
-          <pkAttribute>orderId</pkAttribute>
-        </primaryKey>
-        <foreignKeys>
-          <foreignKey>
-            <fkAttribute>userId</fkAttribute>
-            <references>
-              <refTable>Users</refTable>
-              <refAttribute>id</refAttribute>
-            </references>
-          </foreignKey>
-        </foreignKeys>
+        <IndexFiles>
+          <IndexFile indexName="idx_disc.ind" indexType="BTree" isUnique="1">
+            <IndexAttributes>
+              <IAttribute>DiscID</IAttribute>
+              <IAttribute>DName</IAttribute>
+            </IndexAttributes>
+          </IndexFile>
+        </IndexFiles>
       </Table>
     </Tables>
   </DataBase>

@@ -3,18 +3,17 @@ package org.example;
 import org.example.model.Column;
 import org.example.model.ForeignKey;
 import org.example.services.DatabaseService;
+import org.example.services.IndexService;
 import org.example.services.TableService;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class SQLCommandParser {
 
-  public String parseAndExecute(String sqlCommand, DatabaseService dbService, TableService tblService) {
+  public String parseAndExecute(String sqlCommand, DatabaseService dbService, TableService tblService, IndexService indexService) {
     sqlCommand = sqlCommand.trim().replaceAll("\\s+", " ");
 
     if (sqlCommand.matches("(?i)CREATE DATABASE .*")) {
@@ -35,6 +34,10 @@ public class SQLCommandParser {
 
     if (sqlCommand.matches("(?i)DROP TABLE .*")) {
       return handleDropTable(sqlCommand, tblService);
+    }
+
+    if (sqlCommand.matches("(?i)CREATE (UNIQUE )?INDEX .*")) {
+      return handleCreateIndex(sqlCommand, indexService);
     }
 
     return "Unknown or unsupported SQL command.";
@@ -158,5 +161,32 @@ public class SQLCommandParser {
     }
 
     return "Invalid DROP TABLE command.";
+  }
+
+  private String handleCreateIndex(String sqlCommand, IndexService indexService) {
+    try {
+      boolean isUnique = sqlCommand.matches("(?i)CREATE UNIQUE INDEX .*");
+
+      Pattern pattern = Pattern.compile("(?i)CREATE (UNIQUE )?INDEX (\\S+) ON (\\S+) \\(([^)]+)\\)");
+      Matcher matcher = pattern.matcher(sqlCommand);
+      if (!matcher.find()) {
+        return "Invalid CREATE INDEX syntax.";
+      }
+
+      String indexName = matcher.group(2);
+      String tableName = matcher.group(3);
+      String columnsPart = matcher.group(4);
+
+      List<String> columnNames = Arrays.stream(columnsPart.split(","))
+              .map(String::trim)
+              .collect(Collectors.toList());
+
+      String response =  indexService.createIndex(indexName, tableName, columnNames, isUnique);
+      System.out.println(response);
+
+      return response;
+    } catch (Exception e) {
+      return "Error creating index: " + e.getMessage();
+    }
   }
 }
