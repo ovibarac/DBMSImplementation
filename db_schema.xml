@@ -1,32 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <Databases>
-  <DataBase dataBaseName="db">
+  <DataBase dataBaseName="d">
     <Tables>
-      <Table fileName="Orders.kv" tableName="Orders">
-        <Structure>
-          <Attribute attributeName="orderId" type="INT"/>
-          <Attribute attributeName="userId" type="INT"/>
-        </Structure>
-        <primaryKey>
-          <pkAttribute>orderId</pkAttribute>
-        </primaryKey>
-        <foreignKeys>
-          <foreignKey>
-            <fkAttribute>userId</fkAttribute>
-            <references>
-              <refTable>Users</refTable>
-              <refAttribute>id</refAttribute>
-            </references>
-          </foreignKey>
-        </foreignKeys>
-        <IndexFiles>
-          <IndexFile indexName="idx_orderid.ind" indexType="BTree" isUnique="0">
-            <IndexAttributes>
-              <IAttribute>orderId</IAttribute>
-            </IndexAttributes>
-          </IndexFile>
-        </IndexFiles>
-      </Table>
       <Table fileName="disciplines.kv" tableName="disciplines">
         <Structure>
           <Attribute attributeName="DiscID" type="varchar(5)"/>
@@ -47,6 +22,31 @@
           </IndexFile>
         </IndexFiles>
       </Table>
+      <Table fileName="Orders.kv" tableName="Orders">
+        <Structure>
+          <Attribute attributeName="orderId" type="INT"/>
+          <Attribute attributeName="userId" type="INT"/>
+        </Structure>
+        <primaryKey>
+          <pkAttribute>orderId</pkAttribute>
+        </primaryKey>
+        <foreignKeys>
+          <foreignKey>
+            <fkAttribute>userId</fkAttribute>
+            <references>
+              <refTable>Users</refTable>
+              <refAttribute>id</refAttribute>
+            </references>
+          </foreignKey>
+        </foreignKeys>
+        <IndexFiles>
+          <IndexFile indexName="idx_userid.ind" indexType="BTree" isUnique="0">
+            <IndexAttributes>
+              <IAttribute>userId</IAttribute>
+            </IndexAttributes>
+          </IndexFile>
+        </IndexFiles>
+      </Table>
     </Tables>
   </DataBase>
-</Databases>
+</Databases>

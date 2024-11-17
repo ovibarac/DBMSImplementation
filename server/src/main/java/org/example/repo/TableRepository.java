@@ -1,5 +1,7 @@
 package org.example.repo;
 
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
 import org.example.model.Column;
 import org.example.model.ForeignKey;
 import org.example.utils.DatabaseXmlUtil;
@@ -14,6 +16,7 @@ import org.w3c.dom.NodeList;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -65,5 +68,34 @@ public class TableRepository {
       kvFile.delete();
       System.out.println("Deleted table file: " + tableFileName);
     }
+  }
+
+  public org.bson.Document findRegisterbyId(String table, MongoDatabase db, String id){
+    MongoCollection<org.bson.Document> collection = db.getCollection(table);
+    org.bson.Document filter = new org.bson.Document("id",id);
+    return collection.find(filter).first();
+  }
+
+  public void insertRegister(String table, MongoDatabase db, org.bson.Document d){
+    MongoCollection<org.bson.Document> collection = db.getCollection(table);
+    collection.insertOne(d);
+  }
+
+  public List<String> getTableStructure(String databaseName, String tableName) throws Exception {
+    Document doc = XmlUtil.loadXmlFile(DatabaseConfig.XML_FILE_PATH);
+    Element tableElement = TableXmlUtil.findTableElement(doc, databaseName, tableName);
+
+    Element struct = (Element) tableElement.getElementsByTagName("Structure").item(0);
+    NodeList attr = XmlUtil.getAllChildElements(doc,struct,"Attribute");
+
+    List<String> structure = new ArrayList<>();
+    for(int i=0 ; i<attr.getLength() ; i++){
+      Element node = (Element) attr.item(i);
+      String s1 = node.getAttribute("attributeName");
+      String s2 = node.getAttribute("type");
+      structure.add(s1+"#"+s2);
+    }
+
+    return structure;
   }
 }

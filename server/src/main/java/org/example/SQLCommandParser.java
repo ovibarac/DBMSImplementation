@@ -2,6 +2,7 @@ package org.example;
 
 import org.example.model.Column;
 import org.example.model.ForeignKey;
+import org.example.services.DatabaseContext;
 import org.example.services.DatabaseService;
 import org.example.services.IndexService;
 import org.example.services.TableService;
@@ -38,6 +39,10 @@ public class SQLCommandParser {
 
     if (sqlCommand.matches("(?i)CREATE (UNIQUE )?INDEX .*")) {
       return handleCreateIndex(sqlCommand, indexService);
+    }
+
+    if (sqlCommand.matches("(?i)INSERT INTO .*")) {
+      return handleInsertTable(sqlCommand, tblService);
     }
 
     return "Unknown or unsupported SQL command.";
@@ -187,6 +192,28 @@ public class SQLCommandParser {
       return response;
     } catch (Exception e) {
       return "Error creating index: " + e.getMessage();
+    }
+  }
+
+  private String handleInsertTable(String sqlCommand, TableService tableService){
+    try {
+      Pattern pattern = Pattern.compile("(?i)INSERT INTO (\\w+) VALUES \\(([^)]+)\\);");
+      Matcher matcher = pattern.matcher(sqlCommand);
+      if (!matcher.find()) {
+        return "Invalid INSERT syntax";
+      }
+
+      String tableName = matcher.group(1);
+      String values = matcher.group(2);
+
+      List<String> columns = Arrays.stream(values.split(",")).map(String::trim).toList();
+
+      String response = tableService.insertRegisterService(tableName, columns);
+
+      System.out.println(response);
+      return response;
+    } catch (Exception e) {
+      return "Error inserting: " + e.getMessage();
     }
   }
 }

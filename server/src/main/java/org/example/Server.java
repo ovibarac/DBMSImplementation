@@ -1,5 +1,11 @@
 package org.example;
 
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import org.bson.Document;
+import org.example.services.DatabaseContext;
 import org.example.services.DatabaseService;
 import org.example.services.IndexService;
 import org.example.services.TableService;
@@ -20,6 +26,8 @@ public class Server {
     public static void main(String[] args) {
       try (ServerSocket serverSocket = new ServerSocket(12345)) {
         System.out.println("Database Server is running...");
+        MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017");
+        DatabaseContext.setConnection(mongoClient);
 
         while (true) {
           Socket clientSocket = serverSocket.accept();
