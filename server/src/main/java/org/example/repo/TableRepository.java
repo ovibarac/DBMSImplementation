@@ -10,7 +10,6 @@ import org.example.utils.TableXmlUtil;
 import org.example.utils.XmlUtil;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.NodeList;
 
 import java.io.File;
@@ -97,5 +96,11 @@ public class TableRepository {
     }
 
     return structure;
+  }
+
+  public void deleteRegisterById(String tableName, MongoDatabase db, String id) {
+    MongoCollection<org.bson.Document> collection = db.getCollection(tableName);
+    org.bson.Document filter = new org.bson.Document("id", id);
+    collection.deleteOne(filter);
   }
 }

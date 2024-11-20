@@ -7,7 +7,6 @@ import org.example.model.ForeignKey;
 import org.example.repo.TableRepository;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 
 public class TableService {
@@ -94,6 +93,24 @@ public class TableService {
       response="Registration added to Table "+tableName;
     }catch(Exception e){
       response=e.getMessage();
+    }
+    return response;
+  }
+
+  public String deleteRecords(String tableName, String id) {
+    String response;
+    try {
+      MongoDatabase db = DatabaseContext.getDBConnection();
+
+      Document existent = tableRepository.findRegisterbyId(tableName, db, id);
+      if (existent == null) {
+        throw new Exception("Record with id " + id + " does not exist in table " + tableName);
+      }
+
+      tableRepository.deleteRegisterById(tableName, db, id);
+      response = "Record with id " + id + " successfully deleted from table " + tableName;
+    } catch (Exception e) {
+      response = e.getMessage();
     }
     return response;
   }

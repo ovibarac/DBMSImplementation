@@ -15,5 +15,6 @@ Test commands:
     INSERT INTO Orders VALUES (19,10);
     INSERT INTO Orders VALUES (3,8);
     INSERT INTO Orders VALUES (1,1);
+    DELETE FROM Orders WHERE id = 1;
 
 Result in `db_schema.xml`

@@ -2,7 +2,6 @@ package org.example;
 
 import org.example.model.Column;
 import org.example.model.ForeignKey;
-import org.example.services.DatabaseContext;
 import org.example.services.DatabaseService;
 import org.example.services.IndexService;
 import org.example.services.TableService;
@@ -43,6 +42,10 @@ public class SQLCommandParser {
 
     if (sqlCommand.matches("(?i)INSERT INTO .*")) {
       return handleInsertTable(sqlCommand, tblService);
+    }
+
+    if (sqlCommand.matches("(?i)DELETE FROM .* WHERE id = \\d+;")) {
+      return handleDeleteFromTable(sqlCommand, tblService);
     }
 
     return "Unknown or unsupported SQL command.";
@@ -214,6 +217,26 @@ public class SQLCommandParser {
       return response;
     } catch (Exception e) {
       return "Error inserting: " + e.getMessage();
+    }
+  }
+
+  private String handleDeleteFromTable(String sqlCommand, TableService tableService) {
+    try {
+      Pattern pattern = Pattern.compile("(?i)DELETE FROM (\\w+) WHERE id = (\\d+);");
+      Matcher matcher = pattern.matcher(sqlCommand);
+
+      if (!matcher.find()) {
+        return "Invalid DELETE syntax. Expected format: DELETE FROM <tableName> WHERE id = <id>;";
+      }
+
+      String tableName = matcher.group(1);
+      String id = matcher.group(2);
+
+      String response = tableService.deleteRecords(tableName, id);
+      System.out.println(response);
+      return response;
+    } catch (Exception e) {
+      return "Error deleting record: " + e.getMessage();
     }
   }
 }
