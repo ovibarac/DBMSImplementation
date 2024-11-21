@@ -1,5 +1,7 @@
 package org.example.repo;
 
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
 import org.example.utils.IndexXmlUtil;
 import org.example.utils.TableXmlUtil;
 import org.example.utils.XmlUtil;
@@ -13,7 +15,7 @@ import java.io.IOException;
 import java.util.List;
 
 public class IndexRepository {
-  public void createIndex(String indexName, String databaseName, String tableName, List<String> columnNames, boolean isUnique) throws Exception {
+  public void createIndex(String indexName, String databaseName, String tableName, List<String> columnNames, boolean isUnique, MongoDatabase db) throws Exception {
     Document doc = XmlUtil.loadXmlFile(DatabaseConfig.XML_FILE_PATH);
     String indexFileName = indexName + ".ind";
 
@@ -36,10 +38,12 @@ public class IndexRepository {
           }
       }
 
-    IndexXmlUtil.createIndexElement(doc, databaseName, tableName, columnNames, isUnique, indexFileName);
+      MongoCollection<org.bson.Document> collection = db.getCollection(tableName);
+      collection.createIndex(new org.bson.Document(indexFileName,1));
+      IndexXmlUtil.createIndexElement(doc, databaseName, tableName, columnNames, isUnique, indexFileName);
 
     XmlUtil.writeXmlFile(doc, DatabaseConfig.XML_FILE_PATH);
-    createIndexFile(indexFileName);
+    //createIndexFile(indexFileName);
   }
 
   private void createIndexFile(String fileName) throws IOException {

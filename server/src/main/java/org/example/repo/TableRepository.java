@@ -61,12 +61,12 @@ public class TableRepository {
     tableElement.getParentNode().removeChild(tableElement);
     XmlUtil.writeXmlFile(doc, DatabaseConfig.XML_FILE_PATH);
 
-    String tableFileName = tableName + ".kv";
+    /**String tableFileName = tableName + ".kv";
     File kvFile = new File(tableFileName);
     if (kvFile.exists()) {
       kvFile.delete();
       System.out.println("Deleted table file: " + tableFileName);
-    }
+    }**/
   }
 
   public org.bson.Document findRegisterbyId(String table, MongoDatabase db, String id){

@@ -21,6 +21,8 @@ public class TableService {
         return "No database selected. Use 'USE DB' to select a database.";
       }
       tableRepository.createTable(currentDatabase, tableName, columns, primaryKeys, foreignKeys);
+      MongoDatabase db = DatabaseContext.getDBConnection();
+      db.createCollection(tableName);
       response = "Table '" + tableName + "' created.";
     } catch(Exception e) {
       response = e.getMessage();

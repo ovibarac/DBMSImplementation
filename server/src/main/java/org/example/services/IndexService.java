@@ -1,5 +1,6 @@
 package org.example.services;
 
+import com.mongodb.client.MongoDatabase;
 import org.example.repo.IndexRepository;
 
 import java.util.List;
@@ -14,7 +15,8 @@ public class IndexService {
       if (currentDatabase == null) {
         return "No database selected. Use 'USE DB' to select a database.";
       }
-      indexRepository.createIndex(indexName, currentDatabase, tableName, columnNames, isUnique);
+      MongoDatabase db = DatabaseContext.getDBConnection();
+      indexRepository.createIndex(indexName, currentDatabase, tableName, columnNames, isUnique, db);
       response = "Index '" + indexName + "' created on columns " + columnNames + " isUnique="+ isUnique + ".";
     } catch(Exception e) {
       response = e.getMessage();
