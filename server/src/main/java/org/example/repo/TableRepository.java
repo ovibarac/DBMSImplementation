@@ -30,10 +30,28 @@ public class TableRepository {
       throw new Exception("Database does not exist");
     }
 
+    for(ForeignKey fk : foreignKeys)
+      checkForeignKey(databaseName,fk);
+
     TableXmlUtil.createTableElement(doc, dbElement, tableName, columns, primaryKeys, foreignKeys);
 
     XmlUtil.writeXmlFile(doc, XML_FILE_PATH);
-    createTableFile(tableName + ".kv");
+    //createTableFile(tableName + ".kv");
+  }
+
+  private void checkForeignKey(String databaseName, ForeignKey fk) throws Exception {
+    Document doc = XmlUtil.loadXmlFile(XML_FILE_PATH);
+    TableXmlUtil.findTableElement(doc,databaseName,fk.getReferencedTable());
+    List<String> structure = getTableStructure(databaseName,fk.getReferencedTable());
+    int ok = 0;
+    for(String attribute : structure){
+      if(attribute.split("#")[0].equals(fk.getReferencedColumn())){
+        ok=1;
+        break;
+      }
+    }
+    if(ok==0)
+      throw new Exception("Column "+fk.getReferencedColumn()+" does not exist in Table "+fk.getReferencedTable());
   }
 
   private void createTableFile(String fileName) throws IOException {
@@ -71,7 +89,7 @@ public class TableRepository {
 
   public org.bson.Document findRegisterbyId(String table, MongoDatabase db, String id){
     MongoCollection<org.bson.Document> collection = db.getCollection(table);
-    org.bson.Document filter = new org.bson.Document("id",id);
+    org.bson.Document filter = new org.bson.Document("_id",id);
     return collection.find(filter).first();
   }
 
@@ -100,7 +118,7 @@ public class TableRepository {
 
   public void deleteRegisterById(String tableName, MongoDatabase db, String id) {
     MongoCollection<org.bson.Document> collection = db.getCollection(tableName);
-    org.bson.Document filter = new org.bson.Document("id", id);
+    org.bson.Document filter = new org.bson.Document("_id", id);
     collection.deleteOne(filter);
   }
 }

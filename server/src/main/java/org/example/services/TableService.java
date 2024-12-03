@@ -90,7 +90,7 @@ public class TableService {
           params+="#";
       }
 
-      Document doc = new Document("id",values.get(0)).append("value",params);
+      Document doc = new Document("_id",values.get(0)).append("value",params);
       tableRepository.insertRegister(tableName,db,doc);
       response="Registration added to Table "+tableName;
     }catch(Exception e){

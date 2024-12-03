@@ -2,51 +2,6 @@
 <Databases>
   <DataBase dataBaseName="d">
     <Tables>
-      <Table fileName="disciplines.kv" tableName="disciplines">
-        <Structure>
-          <Attribute attributeName="DiscID" type="varchar(5)"/>
-          <Attribute attributeName="DName" type="varchar(20)"/>
-          <Attribute attributeName="CreditNr" type="int"/>
-        </Structure>
-        <IndexFiles>
-          <IndexFile indexName="idx_disc.ind" indexType="BTree" isUnique="1">
-            <IndexAttributes>
-              <IAttribute>DiscID</IAttribute>
-              <IAttribute>DName</IAttribute>
-            </IndexAttributes>
-          </IndexFile>
-          <IndexFile indexName="idx_CreditNr.ind" indexType="BTree" isUnique="0">
-            <IndexAttributes>
-              <IAttribute>CreditNr</IAttribute>
-            </IndexAttributes>
-          </IndexFile>
-        </IndexFiles>
-      </Table>
-      <Table fileName="Orders.kv" tableName="Orders">
-        <Structure>
-          <Attribute attributeName="orderId" type="INT"/>
-          <Attribute attributeName="userId" type="INT"/>
-        </Structure>
-        <primaryKey>
-          <pkAttribute>orderId</pkAttribute>
-        </primaryKey>
-        <foreignKeys>
-          <foreignKey>
-            <fkAttribute>userId</fkAttribute>
-            <references>
-              <refTable>Users</refTable>
-              <refAttribute>id</refAttribute>
-            </references>
-          </foreignKey>
-        </foreignKeys>
-        <IndexFiles>
-          <IndexFile indexName="idx_userid.ind" indexType="BTree" isUnique="0">
-            <IndexAttributes>
-              <IAttribute>userId</IAttribute>
-            </IndexAttributes>
-          </IndexFile>
-        </IndexFiles>
-      </Table>
       <Table fileName="OrderItem.kv" tableName="OrderItem">
         <Structure>
           <Attribute attributeName="productId" type="INT"/>
@@ -68,6 +23,34 @@
           </foreignKey>
         </foreignKeys>
       </Table>
+      <Table fileName="Users.kv" tableName="Users">
+        <Structure>
+          <Attribute attributeName="userID" type="INT"/>
+          <Attribute attributeName="username" type="varchar(30)"/>
+          <Attribute attributeName="passwd" type="varchar(30)"/>
+        </Structure>
+        <primaryKey>
+          <pkAttribute>userID</pkAttribute>
+        </primaryKey>
+      </Table>
+      <Table fileName="Orders.kv" tableName="Orders">
+        <Structure>
+          <Attribute attributeName="orderID" type="INT"/>
+          <Attribute attributeName="userID" type="INT"/>
+        </Structure>
+        <primaryKey>
+          <pkAttribute>orderID</pkAttribute>
+        </primaryKey>
+        <foreignKeys>
+          <foreignKey>
+            <fkAttribute>userID</fkAttribute>
+            <references>
+              <refTable>Users</refTable>
+              <refAttribute>userID</refAttribute>
+            </references>
+          </foreignKey>
+        </foreignKeys>
+      </Table>
     </Tables>
   </DataBase>
-</Databases>
+</Databases>
