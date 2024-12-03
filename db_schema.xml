@@ -25,32 +25,32 @@
       </Table>
       <Table fileName="Users.kv" tableName="Users">
         <Structure>
-          <Attribute attributeName="userID" type="INT"/>
+          <Attribute attributeName="userId" type="INT"/>
           <Attribute attributeName="username" type="varchar(30)"/>
           <Attribute attributeName="passwd" type="varchar(30)"/>
         </Structure>
         <primaryKey>
-          <pkAttribute>userID</pkAttribute>
+          <pkAttribute>userId</pkAttribute>
         </primaryKey>
       </Table>
       <Table fileName="Orders.kv" tableName="Orders">
         <Structure>
-          <Attribute attributeName="orderID" type="INT"/>
-          <Attribute attributeName="userID" type="INT"/>
+          <Attribute attributeName="orderId" type="INT"/>
+          <Attribute attributeName="userId" type="INT"/>
         </Structure>
         <primaryKey>
-          <pkAttribute>orderID</pkAttribute>
+          <pkAttribute>orderId</pkAttribute>
         </primaryKey>
         <foreignKeys>
           <foreignKey>
-            <fkAttribute>userID</fkAttribute>
+            <fkAttribute>userId</fkAttribute>
             <references>
               <refTable>Users</refTable>
-              <refAttribute>userID</refAttribute>
+              <refAttribute>userId</refAttribute>
             </references>
           </foreignKey>
         </foreignKeys>
       </Table>
     </Tables>
   </DataBase>
-</Databases>
+</Databases>
