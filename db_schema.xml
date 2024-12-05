@@ -22,6 +22,13 @@
             </references>
           </foreignKey>
         </foreignKeys>
+        <IndexFiles>
+          <IndexFile indexName="idx_orderitem_orderid.ind" indexType="BTree" isUnique="1">
+            <IndexAttributes>
+              <IAttribute>orderId</IAttribute>
+            </IndexAttributes>
+          </IndexFile>
+        </IndexFiles>
       </Table>
       <Table fileName="Users.kv" tableName="Users">
         <Structure>

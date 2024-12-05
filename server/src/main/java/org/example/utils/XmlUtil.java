@@ -16,7 +16,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.util.List;
 
 public class XmlUtil {
   public static Document loadXmlFile(String filePath) throws Exception {
@@ -89,4 +88,12 @@ public class XmlUtil {
   public static NodeList getAllChildElements(Document doc, Element parent, String childName) {
     return parent.getElementsByTagName(childName);
   }
+  public static String getChildElementTextContent(Element parent, String tagName) {
+    NodeList nodeList = parent.getElementsByTagName(tagName);
+    if (nodeList.getLength() > 0) {
+      return nodeList.item(0).getTextContent();
+    }
+    return null;
+  }
+
 }

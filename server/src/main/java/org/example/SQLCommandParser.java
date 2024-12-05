@@ -44,7 +44,7 @@ public class SQLCommandParser {
       return handleInsertTable(sqlCommand, tblService);
     }
 
-    if (sqlCommand.matches("(?i)DELETE FROM .* WHERE id = \\d+;")) {
+    if (sqlCommand.matches("(?i)DELETE FROM .*")) {
       return handleDeleteFromTable(sqlCommand, tblService);
     }
 
@@ -200,7 +200,7 @@ public class SQLCommandParser {
 
   private String handleInsertTable(String sqlCommand, TableService tableService){
     try {
-      Pattern pattern = Pattern.compile("(?i)INSERT INTO (\\w+) VALUES \\(([^)]+)\\);");
+      Pattern pattern = Pattern.compile("(?i)INSERT INTO (\\w+) VALUES \\(([^)]+)\\);?");
       Matcher matcher = pattern.matcher(sqlCommand);
       if (!matcher.find()) {
         return "Invalid INSERT syntax";
@@ -222,7 +222,7 @@ public class SQLCommandParser {
 
   private String handleDeleteFromTable(String sqlCommand, TableService tableService) {
     try {
-      Pattern pattern = Pattern.compile("(?i)DELETE FROM (\\w+) WHERE id = (\\d+);");
+      Pattern pattern = Pattern.compile("(?i)DELETE FROM (\\w+) WHERE id = (\\d+);?");
       Matcher matcher = pattern.matcher(sqlCommand);
 
       if (!matcher.find()) {

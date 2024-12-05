@@ -90,7 +90,42 @@ public class TableRepository {
   public org.bson.Document findRegisterbyId(String table, MongoDatabase db, String id){
     MongoCollection<org.bson.Document> collection = db.getCollection(table);
     org.bson.Document filter = new org.bson.Document("_id",id);
+
     return collection.find(filter).first();
+  }
+
+  public int getColumnPositionInTableStructure(String databaseName, String table, String columnName) throws Exception {
+    List<String> structure = getTableStructure(databaseName, table);
+
+    for(int i = 0; i < structure.size(); i++){
+      String attribute = structure.get(i);
+      if(attribute.split("#")[0].equals(columnName)){
+        return i;
+      }
+    }
+
+    return -1;
+  }
+
+  public boolean findRegisterbyColumnValue(String table, String databaseName, MongoDatabase db, String columnName,  String columnValue) throws Exception {
+    //Gaseste pozitia coloanei in campul value din Mongo
+    int position = getColumnPositionInTableStructure(databaseName, table, columnName) - 1;
+    if(position < 0){
+      return false;
+    }
+
+    MongoCollection<org.bson.Document> collection = db.getCollection(table);
+
+    //Cauta o inregistrare cu valoarea cautata in pozitia position din campul value
+    for (org.bson.Document document : collection.find()) {
+      String value = document.getString("value");
+      String[] values = value.split("#");
+
+      if (position < values.length && values[position].equals(columnValue)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   public void insertRegister(String table, MongoDatabase db, org.bson.Document d){
@@ -114,6 +149,84 @@ public class TableRepository {
     }
 
     return structure;
+  }
+
+  public List<String> getReferencingTables(String databaseName, String tableName) throws Exception {
+    Document doc = XmlUtil.loadXmlFile(XML_FILE_PATH);
+    Element databaseElement = DatabaseXmlUtil.findDatabaseElement(doc, databaseName);
+    if (databaseElement == null) {
+      throw new Exception("Database does not exist");
+    }
+
+    NodeList tableNodes = XmlUtil.getAllChildElements(doc, databaseElement, "Table");
+    List<String> referencingTables = new ArrayList<>();
+
+    for (int i = 0; i < tableNodes.getLength(); i++) {
+      Element tableElement = (Element) tableNodes.item(i);
+      NodeList foreignKeys = XmlUtil.getAllChildElements(doc, tableElement, "foreignKey");
+
+      for (int j = 0; j < foreignKeys.getLength(); j++) {
+        Element foreignKeyElement = (Element) foreignKeys.item(j);
+        String refTable = XmlUtil.getChildElementTextContent(foreignKeyElement, "refTable");
+        if (refTable != null && refTable.equals(tableName)) {
+          referencingTables.add(tableElement.getAttribute("tableName"));
+        }
+      }
+    }
+
+    return referencingTables;
+  }
+
+  public String getReferencingColumn(String databaseName, String tableName, String referencedTable) throws Exception {
+    Document doc = XmlUtil.loadXmlFile(XML_FILE_PATH);
+    Element tableElement = TableXmlUtil.findTableElement(doc, databaseName, tableName);
+
+    NodeList foreignKeys = XmlUtil.getAllChildElements(doc, tableElement, "foreignKey");
+    for (int i = 0; i < foreignKeys.getLength(); i++) {
+      Element foreignKeyElement = (Element) foreignKeys.item(i);
+      String refTable = XmlUtil.getChildElementTextContent(foreignKeyElement, "refTable");
+      if (refTable != null && refTable.equals(referencedTable)) {
+        return XmlUtil.getChildElementTextContent(foreignKeyElement, "refAttribute");
+      }
+    }
+
+    throw new Exception("No foreign key referencing table " + referencedTable + " found in table " + tableName);
+  }
+
+  public List<String> findIndexesForColumn(String databaseName, String tableName, String columnName) throws Exception {
+    List<String> indexNames = new ArrayList<>();
+
+    Document doc = XmlUtil.loadXmlFile(DatabaseConfig.XML_FILE_PATH);
+    Element tableElement = TableXmlUtil.findTableElement(doc, databaseName, tableName);
+
+    NodeList indexFiles = tableElement.getElementsByTagName("IndexFile");
+    for (int j = 0; j < indexFiles.getLength(); j++) {
+      Element indexFileElement = (Element) indexFiles.item(j);
+
+      NodeList indexAttributes = indexFileElement.getElementsByTagName("IAttribute");
+      for (int k = 0; k < indexAttributes.getLength(); k++) {
+        Element indexAttributeElement = (Element) indexAttributes.item(k);
+        if (columnName.equals(indexAttributeElement.getTextContent().trim())) {
+          indexNames.add(indexFileElement.getAttribute("indexName"));
+        }
+      }
+    }
+
+    return indexNames;
+  }
+
+  public boolean isRecordReferenced(String databaseName, String referencingTable, MongoDatabase db, String columnName, String id) throws Exception {
+    List<String> indexNames = findIndexesForColumn(databaseName, referencingTable, columnName);
+
+    if(!indexNames.isEmpty()) {
+      //Cauta id folosind index-ul daca exista
+      String indexName = indexNames.get(0);
+
+      return findRegisterbyId(indexName, db, id) != null;
+    }else{
+      //Table scan daca nu exista index
+      return findRegisterbyColumnValue(referencingTable, databaseName, db, columnName, id);
+    }
   }
 
   public void deleteRegisterById(String tableName, MongoDatabase db, String id) {

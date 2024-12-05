@@ -35,7 +35,15 @@ public class TableService {
     String response;
     try{
       String currentDatabase = DatabaseContext.getCurrentDatabase();
+
+      //Gaseste tabelele cu foreign key la id-ul tabelului curent
+      List<String> referencingTables = tableRepository.getReferencingTables(currentDatabase, tableName);
+      if(!referencingTables.isEmpty()) {
+        return "Drop rejected: Table " + tableName + " is referenced by table " + referencingTables.get(0) + ".";
+      }
+
       tableRepository.dropTable(currentDatabase, tableName);
+
       response="Table '" + tableName + "' dropped successfully.";
     }catch(Exception e){
       response=e.getMessage();
@@ -103,13 +111,29 @@ public class TableService {
     String response;
     try {
       MongoDatabase db = DatabaseContext.getDBConnection();
+      String databaseName = DatabaseContext.getCurrentDatabase();
 
       Document existent = tableRepository.findRegisterbyId(tableName, db, id);
       if (existent == null) {
         throw new Exception("Record with id " + id + " does not exist in table " + tableName);
       }
 
+      //Gaseste tabelele cu foreign key la id-ul tabelului curent
+      List<String> referencingTables = tableRepository.getReferencingTables(databaseName, tableName);
+
+      for (String refTable : referencingTables) {
+        String referencingColumn = tableRepository.getReferencingColumn(databaseName, refTable, tableName);
+        System.out.println("TableService: Table " + tableName + " is referenced by table " + refTable +" on column " + referencingColumn);
+
+        //Opreste stergerea daca id-ul este gasit
+        boolean isReferenced = tableRepository.isRecordReferenced(databaseName, refTable, db, referencingColumn, id);
+        if (isReferenced) {
+          throw new Exception("Delete rejected:  Record with id " + id + " referenced by table " + refTable + " on column " + referencingColumn + ".");
+        }
+      }
+
       tableRepository.deleteRegisterById(tableName, db, id);
+
       response = "Record with id " + id + " successfully deleted from table " + tableName;
     } catch (Exception e) {
       response = e.getMessage();
