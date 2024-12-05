@@ -1,5 +1,6 @@
 package org.example.services;
 
+import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
 import org.example.model.Column;
@@ -32,6 +33,7 @@ public class TableService {
   }
 
   public String dropTable(String tableName) {
+    MongoDatabase db = DatabaseContext.getDBConnection();
     String response;
     try{
       String currentDatabase = DatabaseContext.getCurrentDatabase();
@@ -43,6 +45,8 @@ public class TableService {
       }
 
       tableRepository.dropTable(currentDatabase, tableName);
+      MongoCollection<org.bson.Document> collection = db.getCollection(tableName);
+      collection.drop();
 
       response="Table '" + tableName + "' dropped successfully.";
     }catch(Exception e){
@@ -132,7 +136,29 @@ public class TableService {
         }
       }
 
+      List<String> attr = tableRepository.getTableStructure(databaseName,tableName);
+      String[] values = existent.getString("value").split("#");
+      for(int i=1 ; i<attr.size() ; i++){
+        String column = attr.get(i).split("#")[0];
+        List<String> indexes = tableRepository.findIndexesForColumn(databaseName,tableName,column);
+        if(!indexes.isEmpty()){
+          Document indexDoc = tableRepository.findRegisterbyId(indexes.get(0),db,values[i-1]);
+          String[] elem = indexDoc.getString("value").split("#");
+          if(elem.length == 1)
+            tableRepository.deleteRegisterById(indexes.get(0),db,values[i-1]);
+          else{
+            String newvalue = "";
+            for(int j=0 ; j<elem.length ; j++)
+              if(!elem[j].equals(id))
+                newvalue+=elem[j]+"#";
+            newvalue = newvalue.substring(0,newvalue.length()-1);
+            tableRepository.updateRegisterById(indexes.get(0),db,values[i-1],newvalue);
+          }
+        }
+      }
+
       tableRepository.deleteRegisterById(tableName, db, id);
+
 
       response = "Record with id " + id + " successfully deleted from table " + tableName;
     } catch (Exception e) {

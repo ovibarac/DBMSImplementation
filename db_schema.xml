@@ -57,6 +57,13 @@
             </references>
           </foreignKey>
         </foreignKeys>
+        <IndexFiles>
+          <IndexFile indexName="idx_orders_userid.ind" indexType="BTree" isUnique="1">
+            <IndexAttributes>
+              <IAttribute>userId</IAttribute>
+            </IndexAttributes>
+          </IndexFile>
+        </IndexFiles>
       </Table>
     </Tables>
   </DataBase>

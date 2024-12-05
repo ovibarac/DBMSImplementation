@@ -1,12 +1,12 @@
 package org.example.services;
 
 import com.mongodb.client.MongoDatabase;
-import org.example.repo.IndexRepository;
+import org.example.repo.TableRepository;
 
 import java.util.List;
 
 public class IndexService {
-  private IndexRepository indexRepository = new IndexRepository();
+  private TableRepository tableRepository = new TableRepository();
 
   public String createIndex(String indexName, String tableName, List<String> columnNames, boolean isUnique) throws Exception {
     String response;
@@ -16,7 +16,7 @@ public class IndexService {
         return "No database selected. Use 'USE DB' to select a database.";
       }
       MongoDatabase db = DatabaseContext.getDBConnection();
-      indexRepository.createIndex(indexName, currentDatabase, tableName, columnNames, isUnique, db);
+      tableRepository.createIndex(indexName, currentDatabase, tableName, columnNames, isUnique, db);
       response = "Index '" + indexName + "' created on columns " + columnNames + " isUnique="+ isUnique + ".";
     } catch(Exception e) {
       response = e.getMessage();

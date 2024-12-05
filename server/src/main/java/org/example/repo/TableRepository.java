@@ -2,6 +2,9 @@ package org.example.repo;
 
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Updates.set;
+import org.bson.types.ObjectId;
 import org.example.model.Column;
 import org.example.model.ForeignKey;
 import org.example.utils.DatabaseXmlUtil;
@@ -233,5 +236,76 @@ public class TableRepository {
     MongoCollection<org.bson.Document> collection = db.getCollection(tableName);
     org.bson.Document filter = new org.bson.Document("_id", id);
     collection.deleteOne(filter);
+  }
+
+  public void createIndex(String indexName, String databaseName, String tableName, List<String> columnNames, boolean isUnique, MongoDatabase db) throws Exception {
+    Document doc = XmlUtil.loadXmlFile(DatabaseConfig.XML_FILE_PATH);
+    String indexFileName = indexName + ".ind";
+
+    Element tableElement = TableXmlUtil.findTableElement(doc, databaseName, tableName);
+
+    ///Se extrage primary key din Table
+    NodeList primaryKey = tableElement.getElementsByTagName("primaryKey");
+    Element pkElem = (Element) primaryKey.item(0);
+
+
+    for (String columnName : columnNames) {
+      ///verificam daca coloana exista sau daca face parte din Primary Key
+      boolean columnExists = TableXmlUtil.findColumn(doc,databaseName,tableName,columnName);
+      if (!columnExists)
+        throw new Exception("Column "+ columnName + " is not in table!");
+      if (pkElem != null) {
+        String primaryKeyAttribute = pkElem.getElementsByTagName("pkAttribute").item(0).getTextContent();
+        if (columnName.equals(primaryKeyAttribute))
+          throw new Exception("Column " + columnName + " is the primary key!");
+      }
+    }
+
+    db.createCollection(indexFileName);
+
+    checkIndexUnique(db,isUnique,tableName,indexFileName,databaseName,columnNames);
+  }
+
+  private void checkIndexUnique(MongoDatabase db, boolean isUnique, String tableName, String indexFileName, String databaseName, List<String> columnNames) throws Exception {
+    Document doc = XmlUtil.loadXmlFile(DatabaseConfig.XML_FILE_PATH);
+    MongoCollection<org.bson.Document> collection = db.getCollection(tableName);
+    MongoCollection<org.bson.Document> indexCollection = db.getCollection(indexFileName);
+    int pos = getColumnPositionInTableStructure(databaseName,tableName,columnNames.get(0)) -1;
+
+
+    for(org.bson.Document collectionDoc : collection.find()) {
+      String value = collectionDoc.getString("value").split("#")[pos];
+      org.bson.Document query = new org.bson.Document("_id", value);
+      org.bson.Document indexDoc = indexCollection.find(query).first();
+
+      String id = collectionDoc.getString("_id");
+      org.bson.Document elem = new org.bson.Document("_id", value).append("value", id);
+
+      if(indexDoc == null){
+        indexCollection.insertOne(elem);
+      }
+      else {
+        if (isUnique) {
+          indexCollection.drop();
+          throw new Exception("Current data does not respect the unique constraint of " + indexFileName);
+        }
+        else {
+          String updated = indexDoc.getString("value");
+          indexCollection.updateOne(eq("_id",value),set("value",updated+"#"+id));
+        }
+      }
+    }
+
+    IndexXmlUtil.createIndexElement(doc, databaseName, tableName, columnNames, isUnique, indexFileName);
+    XmlUtil.writeXmlFile(doc, DatabaseConfig.XML_FILE_PATH);
+  }
+
+  public void updateRegisterById(String tableName, MongoDatabase db, String id, String value){
+    MongoCollection<org.bson.Document> collection = db.getCollection(tableName);
+    collection.updateOne(eq("_id",id),set("value",value));
+  }
+
+  public void checkConstraints(MongoDatabase db, String databaseName, String tableName, List<String> values){
+    
   }
 }

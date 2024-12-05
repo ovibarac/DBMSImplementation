@@ -17,4 +17,10 @@ Test commands:
     INSERT INTO Orders VALUES (1,1);
     DELETE FROM Orders WHERE id = 1;
 
+    INSERT INTO Users VALUES (4,muwu,puwu);
+    CREATE TABLE Test (testId INT, uId INT, PRIMARY KEY (testId), FOREIGN KEY (uId) REFERENCES Users(uId));
+    CREATE UNIQUE INDEX idx_usrn ON Users (username)
+    CREATE INDEX idx_usrn ON Users (username)
+    DELETE FROM Users WHERE id = 2;
+
 Result in `db_schema.xml`
