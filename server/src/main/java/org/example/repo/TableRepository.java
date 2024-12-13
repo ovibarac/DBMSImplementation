@@ -211,6 +211,7 @@ public class TableRepository {
         Element indexAttributeElement = (Element) indexAttributes.item(k);
         if (columnName.equals(indexAttributeElement.getTextContent().trim())) {
           indexNames.add(indexFileElement.getAttribute("indexName"));
+          indexNames.add(indexFileElement.getAttribute("isUnique"));
         }
       }
     }
@@ -305,7 +306,54 @@ public class TableRepository {
     collection.updateOne(eq("_id",id),set("value",value));
   }
 
-  public void checkConstraints(MongoDatabase db, String databaseName, String tableName, List<String> values){
-    
+  private List<String> getForeignKeys (Document doc, String database, String tablename) throws Exception {
+    List<String> fKeys = new ArrayList<>();
+    Element tableElement = TableXmlUtil.findTableElement(doc, database, tablename);
+    NodeList elems = tableElement.getElementsByTagName("foreignKey");
+    for(int i=0 ; i<elems.getLength() ; i++) {
+      String key = "";
+      Element e = (Element) elems.item(i);
+      NodeList tableColumn = e.getElementsByTagName("fkAttribute");
+      key +=  tableColumn.item(0).getTextContent();
+      NodeList refTable = e.getElementsByTagName("refTable");
+      key += "#"+refTable.item(0).getTextContent();
+      NodeList refColumn = e.getElementsByTagName("refAttribute");
+      key += "#"+refColumn.item(0).getTextContent();
+      fKeys.add(key);
+    }
+    return fKeys;
+  }
+
+  private int getColumn (List<String> attr, String column){
+    for(int i=0 ; i<attr.size() ; i++)
+      if(attr.get(i).contains(column))
+        return i;
+    return -1;
+  }
+
+  public void checkInsertConstraints(MongoDatabase db, String databaseName, String tableName, List<String> values) throws Exception {
+    Document doc = XmlUtil.loadXmlFile(DatabaseConfig.XML_FILE_PATH);
+    List<String> attr = getTableStructure(databaseName,tableName);
+    List<String> fKeys = getForeignKeys(doc,databaseName,tableName);
+    for(int i=0 ; i<fKeys.size() ; i++)
+    {
+      String key = fKeys.get(i);
+      int index = getColumn(attr,key.split("#")[0]);
+      String value = values.get(index);
+      org.bson.Document d = findRegisterbyId(key.split("#")[1],db,value);
+      if(d==null)
+        throw new Exception("Foreign key "+key.split("#")[2]+" with value "+value+" does not exist in Table "+key.split("#")[1]);
+    }
+    for(int i=1 ; i<attr.size() ; i++)
+    {
+      String column = attr.get(i).split("#")[0];
+      List<String> indexes = findIndexesForColumn(databaseName,tableName,column);
+      if(!indexes.isEmpty())
+        if(indexes.get(1).equals("1")){
+          org.bson.Document elem = findRegisterbyId(indexes.get(0),db,values.get(i));
+          if(elem!=null)
+            throw new Exception("Register violates unique constraint on index file "+indexes.get(0)+" for column "+column);
+        }
+    }
   }
 }

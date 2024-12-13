@@ -23,4 +23,10 @@ Test commands:
     CREATE INDEX idx_usrn ON Users (username)
     DELETE FROM Users WHERE id = 2;
 
+    INSERT INTO Orders VALUES (3,3);
+    INSERT INTO Orders VALUES (3,7);
+    INSERT INTO Users VALUES (4,muwu,great);
+    INSERT INTO Users VALUES (5,adk,kda);
+    INSERT INTO Orders VALUES (3,5);
+
 Result in `db_schema.xml`

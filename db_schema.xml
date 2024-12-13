@@ -39,6 +39,13 @@
         <primaryKey>
           <pkAttribute>userId</pkAttribute>
         </primaryKey>
+        <IndexFiles>
+          <IndexFile indexName="idx_usrn.ind" indexType="BTree" isUnique="0">
+            <IndexAttributes>
+              <IAttribute>username</IAttribute>
+            </IndexAttributes>
+          </IndexFile>
+        </IndexFiles>
       </Table>
       <Table fileName="Orders.kv" tableName="Orders">
         <Structure>
@@ -67,4 +74,4 @@
       </Table>
     </Tables>
   </DataBase>
-</Databases>
+</Databases>

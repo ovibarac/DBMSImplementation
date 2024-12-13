@@ -94,6 +94,7 @@ public class TableService {
       Document existent = tableRepository.findRegisterbyId(tableName,db,values.get(0));
       if(existent!=null)
         throw new Exception("The selected id is already in the database!");
+      tableRepository.checkInsertConstraints(db,currentDatabase,tableName,values);
 
       String params="";
       for(int i=1 ; i<values.size();i++) {
@@ -104,6 +105,24 @@ public class TableService {
 
       Document doc = new Document("_id",values.get(0)).append("value",params);
       tableRepository.insertRegister(tableName,db,doc);
+
+      for(int i=1 ; i<attr.size() ; i++)
+      {
+        String col = attr.get(i).split("#")[0];
+        List<String> indexes = tableRepository.findIndexesForColumn(currentDatabase,tableName,col);
+        if(!indexes.isEmpty())
+        {
+          Document elemIndex = tableRepository.findRegisterbyId(indexes.get(0),db,values.get(i));
+          if(elemIndex==null)
+            tableRepository.insertRegister(indexes.get(0),db,new Document("_id",values.get(i)).append("value",values.get(0)));
+          else
+          {
+            String old_val = elemIndex.getString("value");
+            tableRepository.updateRegisterById(indexes.get(0),db,values.get(i),old_val+"#"+values.get(0));
+          }
+        }
+      }
+
       response="Registration added to Table "+tableName;
     }catch(Exception e){
       response=e.getMessage();
