@@ -1,6 +1,7 @@
 package org.example;
 
 import org.example.model.Column;
+import org.example.model.Condition;
 import org.example.model.ForeignKey;
 import org.example.services.DatabaseService;
 import org.example.services.IndexService;
@@ -46,6 +47,10 @@ public class SQLCommandParser {
 
     if (sqlCommand.matches("(?i)DELETE FROM .*")) {
       return handleDeleteFromTable(sqlCommand, tblService);
+    }
+
+    if (sqlCommand.matches("(?i)SELECT .*")) {
+      return handleSelectionFromTable(sqlCommand, tblService);
     }
 
     return "Unknown or unsupported SQL command.";
@@ -238,5 +243,80 @@ public class SQLCommandParser {
     } catch (Exception e) {
       return "Error deleting record: " + e.getMessage();
     }
+  }
+
+  private String handleSelectionFromTable(String sqlCommand, TableService tableService) {
+    try {
+      boolean distinct = sqlCommand.matches("(?i)SELECT DISTINCT .*");
+      Pattern pattern = Pattern.compile("(?i)SELECT (DISTINCT )?(.+) FROM (.+) WHERE (.+)");
+      Matcher matcher = pattern.matcher(sqlCommand);
+
+      if(!matcher.find())
+        return "Invalid SELECT sintax";
+
+      String columns = matcher.group(2);
+      String tables = matcher.group(3);
+      String conditions = matcher.group(4);
+
+      List<String> tableList = parseTables(tables);
+      List<String> columnList = parseColumns(columns,tableList);
+      List<Condition> conditionList = parseConditions(conditions,tableList);
+
+      String response = tableService.selectService(tableList,columnList,conditionList,distinct);
+      System.out.println(response);
+      return response;
+    } catch (Exception e) {
+      return "Error selection: " + e.getMessage();
+    }
+  }
+
+  private List<String> parseTables(String tables){
+    List<String> rez = new ArrayList<>();
+    String[] params = tables.split(",");
+    for(int i=0 ; i<params.length ; i++) {
+      String[] t = params[i].split(" ");
+      //Daca sunt mai multe tabele, sunt de forma Attributes a, ca au nevoie de denumiri
+      //Se va transpune in coloane daca e nevoie, a.numeColoana
+      //numele tabelului, pozitiile pare, denumirea parametrului, pozitiile impare
+      rez.addAll(Arrays.asList(t));
+    }
+    return rez;
+  }
+
+  private List<String> parseColumns (String columns, List<String> tables) throws Exception {
+    List<String> rez = new ArrayList<>();
+    String[] elems = columns.split(",");
+    for(int i=0 ; i<elems.length ; i++){
+      //daca size-ul este mai mare de 1, exista denumiri de variable ale tabelului, trebuie verificate daca sunt folosite de coloane
+      if(tables.size()>1)
+      {
+        if(!tables.contains(elems[i].split("\\.")[0]))
+          throw new Exception("Invalid SELECT sintax (error in column list)");
+      }
+      rez.add(elems[i]);
+    }
+    return rez;
+  }
+
+  private List<Condition> parseConditions (String conditions, List<String> tables) throws Exception {
+    List<Condition> rez = new ArrayList<>();
+    String[] cond = conditions.split("AND");
+    for(int i=0 ; i<cond.length ; i++){
+      if(cond[i].charAt(0)==' ')
+        cond[i] = cond[i].substring(1);
+      Condition c = new Condition(cond[i]);
+      if(tables.size()>1)
+      {
+        String column = c.getColumn();
+        if(!tables.contains(column.split("\\.")[0]))
+          throw new Exception("Invalid SELECT sintax (column error in a condition!)");
+      }
+      List<String> signs = List.of("=","LIKE",">","<");
+      String sign = c.getSign();
+      if(!signs.contains(sign))
+        throw new Exception("Invalid SELECT sintax (invalid sign in a condition!)");
+      rez.add(c);
+    }
+    return rez;
   }
 }

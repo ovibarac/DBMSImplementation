@@ -4,6 +4,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
 import org.example.model.Column;
+import org.example.model.Condition;
 import org.example.model.ForeignKey;
 import org.example.repo.TableRepository;
 
@@ -77,7 +78,7 @@ public class TableService {
           reqSize+=type.charAt(j);
           j++;
         }
-        if(values.size()>Integer.parseInt(reqSize))
+        if(values.get(i).length()>Integer.parseInt(reqSize))
           throw new Exception("varchar length condition not respected!");
       }
     }
@@ -180,6 +181,61 @@ public class TableService {
 
 
       response = "Record with id " + id + " successfully deleted from table " + tableName;
+    } catch (Exception e) {
+      response = e.getMessage();
+    }
+    return response;
+  }
+
+  private String findColumnInStructure(List<String> structure, String column){
+      for (String s : structure)
+          if (s.startsWith(column))
+              return s.split("#")[1];
+    return null;
+  }
+
+  private void validateSelect(String database, List<String> tables, List<String> columns, List<Condition> conditions) throws Exception {
+    if(tables.size()==1)
+    {
+      String t = tables.get(0);
+      List<String> attr = tableRepository.getTableStructure(database,t);
+      for (String column : columns)
+        if (findColumnInStructure(attr, column)==null)
+          throw new Exception("Column " + column + " does not exist in table " + t);
+      for (Condition c : conditions)
+        if (findColumnInStructure(attr, c.getColumn())==null)
+          throw new Exception("Column " + c.getColumn()+ " does not exist in table "+t);
+    }
+    else{
+      for (String column : columns){
+        int index = tables.indexOf(column.split("\\.")[0]);
+        String t = tables.get(index-1);
+        List<String> attr = tableRepository.getTableStructure(database,t);
+        if(findColumnInStructure(attr,column.split("\\.")[1])==null)
+          throw new Exception("Column " + column.split("\\.")[1] + " does not exist in table " + t);
+      }
+      for (Condition c : conditions){
+        String col = c.getColumn();
+        int index = tables.indexOf(col.split("\\.")[0]);
+        String t = tables.get(index-1);
+        List<String> attr = tableRepository.getTableStructure(database,t);
+        String type = findColumnInStructure(attr,col.split("\\.")[1]);
+        if(type==null)
+          throw new Exception("Column " + col.split("\\.")[1] + " does not exist in table " + t);
+        c.validateValue(type);
+      }
+    }
+  }
+
+  public String selectService(List<String> tables, List<String> columns, List<Condition> conditions, boolean distinct){
+    String response;
+    try {
+      MongoDatabase db = DatabaseContext.getDBConnection();
+      String databaseName = DatabaseContext.getCurrentDatabase();
+
+      validateSelect(databaseName,tables,columns,conditions);
+
+      response = "good";
     } catch (Exception e) {
       response = e.getMessage();
     }
