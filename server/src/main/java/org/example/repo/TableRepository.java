@@ -1,11 +1,8 @@
 package org.example.repo;
 
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoDatabase;
-import static com.mongodb.client.model.Filters.eq;
-import static com.mongodb.client.model.Updates.set;
-import org.bson.types.ObjectId;
+import com.mongodb.client.*;
 import org.example.model.Column;
+import org.example.model.Condition;
 import org.example.model.ForeignKey;
 import org.example.utils.DatabaseXmlUtil;
 import org.example.utils.IndexXmlUtil;
@@ -21,6 +18,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+
+import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Updates.set;
 
 public class TableRepository {
   String XML_FILE_PATH = DatabaseConfig.XML_FILE_PATH;
@@ -39,7 +39,6 @@ public class TableRepository {
     TableXmlUtil.createTableElement(doc, dbElement, tableName, columns, primaryKeys, foreignKeys);
 
     XmlUtil.writeXmlFile(doc, XML_FILE_PATH);
-    //createTableFile(tableName + ".kv");
   }
 
   private void checkForeignKey(String databaseName, ForeignKey fk) throws Exception {
@@ -97,6 +96,149 @@ public class TableRepository {
     return collection.find(filter).first();
   }
 
+  public List<org.bson.Document> findAllByIdCondition(String table, MongoDatabase db, Condition condition, String type) {
+    List<org.bson.Document> items = new ArrayList<>();
+    MongoCollection<org.bson.Document> collection = db.getCollection(table);
+
+    try {
+      Object parsedValue = condition.parseValue(type);
+
+      List<org.bson.Document> pipeline = new ArrayList<>();
+
+      if (!type.toUpperCase().contains("VARCHAR")) {
+        String castOperator = type.equalsIgnoreCase("INT") ? "$toInt" :
+                type.equalsIgnoreCase("FLOAT") ? "$toDecimal" :
+                        "$toDouble";
+        pipeline.add(new org.bson.Document("$addFields",
+                new org.bson.Document("typedId", new org.bson.Document(castOperator, "$_id"))));
+      } else {
+        pipeline.add(new org.bson.Document("$addFields",
+                new org.bson.Document("typedId", "$_id")));
+      }
+
+      org.bson.Document matchFilter = new org.bson.Document();
+      switch (condition.getSign()) {
+        case "=":
+          matchFilter.append("typedId", parsedValue);
+          break;
+        case "<":
+          matchFilter.append("typedId", new org.bson.Document("$lt", parsedValue));
+          break;
+        case "<=":
+          matchFilter.append("typedId", new org.bson.Document("$lte", parsedValue));
+          break;
+        case ">":
+          matchFilter.append("typedId", new org.bson.Document("$gt", parsedValue));
+          break;
+        case ">=":
+          matchFilter.append("typedId", new org.bson.Document("$gte", parsedValue));
+          break;
+        case "!=":
+          matchFilter.append("typedId", new org.bson.Document("$ne", parsedValue));
+          break;
+        case "LIKE":
+          if (!type.toUpperCase().contains("VARCHAR")) {
+            throw new IllegalArgumentException("LIKE operator is only supported for VARCHAR type.");
+          }
+          matchFilter.append("typedId", new org.bson.Document("$regex", parsedValue.toString()).append("$options", "i"));
+          break;
+        default:
+          throw new IllegalArgumentException("Unsupported sign: " + condition.getSign());
+      }
+      pipeline.add(new org.bson.Document("$match", matchFilter));
+
+      AggregateIterable<org.bson.Document> results = collection.aggregate(pipeline);
+      try (MongoCursor<org.bson.Document> cursor = results.iterator()) {
+        while (cursor.hasNext()) {
+          items.add(cursor.next());
+        }
+      }
+    } catch (Exception e) {
+      System.out.println(e.getMessage());
+    }
+
+    return items;
+  }
+
+  public List<org.bson.Document> findAllByColumnCondition(String table, String databaseName, MongoDatabase db, Condition condition) throws Exception {
+    List<org.bson.Document> items = new ArrayList<>();
+    int columnPosition = getColumnPositionInTableStructure(databaseName, table, condition.getColumn()) - 1;
+
+    if(columnPosition < 0){
+      return items;
+    }
+
+    MongoCollection<org.bson.Document> collection = db.getCollection(table);
+    for (org.bson.Document document : collection.find()) {
+      String value = document.getString("value");
+      String[] values = value.split("#");
+
+      try {
+        if (columnPosition >= values.length) {
+          return items;
+        }
+
+        String columnValue = values[columnPosition];
+        boolean matches = false;
+        String conditionValue = condition.getValue();
+
+        matches = switch (condition.getSign()) {
+          case "=" -> columnValue.equals(conditionValue);
+          case "<" -> columnValue.compareTo(conditionValue) < 0;
+          case "<=" -> columnValue.compareTo(conditionValue) <= 0;
+          case ">" -> columnValue.compareTo(conditionValue) > 0;
+          case ">=" -> columnValue.compareTo(conditionValue) >= 0;
+          case "!=" -> !columnValue.equals(conditionValue);
+          case "LIKE" -> columnValue.matches(".*" + condition.getValue() + ".*");
+          default -> throw new IllegalArgumentException("Unsupported sign: " + condition.getSign());
+        };
+
+        if (matches) {
+          items.add(document);
+        }
+
+      } catch (Exception e) {
+        System.out.println(e.getMessage());
+      }
+    }
+
+    return items;
+  }
+
+  public List<List<String>> applyProjectionsToEntries(String databaseName, String table, List<String> columns, List<org.bson.Document> entries) {
+    List<Integer> positions = columns.stream()
+            .map(column -> {
+              try {
+                return getColumnPositionInTableStructure(databaseName, table, column);
+              } catch (Exception e) {
+                throw new RuntimeException("Projection " + column + " could not be applied");
+              }
+            })
+            .toList();
+
+    List<List<String>> projected = new ArrayList<>();
+    for (org.bson.Document document : entries) {
+      String value = document.getString("value");
+      String id = document.getString("_id");
+      String[] values = value.split("#");
+
+      List<String> row = new ArrayList<>();
+      positions.forEach(position -> {
+        if(position == 0){
+          row.add(id);
+        }else{
+          row.add(values[position - 1]);
+        }
+      });
+
+      projected.add(row);
+
+    }
+
+    return projected;
+  }
+
+
   public int getColumnPositionInTableStructure(String databaseName, String table, String columnName) throws Exception {
     List<String> structure = getTableStructure(databaseName, table);
 
@@ -108,6 +250,26 @@ public class TableRepository {
     }
 
     return -1;
+  }
+
+  public boolean isPrimaryKey(String databaseName, String tableName, String columnName) throws Exception {
+    Document doc = XmlUtil.loadXmlFile(DatabaseConfig.XML_FILE_PATH);
+    Element tableElement = TableXmlUtil.findTableElement(doc, databaseName, tableName);
+
+    Element primaryKeyElement = (Element) tableElement.getElementsByTagName("primaryKey").item(0);
+    if (primaryKeyElement == null) {
+      return false;
+    }
+
+    NodeList pkAttributes = XmlUtil.getAllChildElements(doc, primaryKeyElement, "pkAttribute");
+    for (int i = 0; i < pkAttributes.getLength(); i++) {
+      Element pkNode = (Element) pkAttributes.item(i);
+      String pkAttribute = pkNode.getTextContent().trim();
+      if (pkAttribute.equals(columnName)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   public boolean findRegisterbyColumnValue(String table, String databaseName, MongoDatabase db, String columnName,  String columnValue) throws Exception {

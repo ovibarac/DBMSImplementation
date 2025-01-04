@@ -1,8 +1,5 @@
 package org.example.model;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 public class Condition {
     private String column;
     private String sign;
@@ -29,40 +26,6 @@ public class Condition {
         return value;
     }
 
-    public boolean checkCondition(String s, String type) throws Exception {
-        ///Incompleta, m-am blocat in idei
-        Object elem1;
-        Object elem2;
-
-        if(type.equals("INT")) {
-            elem1 = Integer.parseInt(s);
-            elem2 = Integer.parseInt(this.value);
-
-        }
-        if(type.equals("FLOAT")){
-            elem1 = Float.parseFloat(s);
-            elem2 = Float.parseFloat(this.value);
-        }
-        if(type.equals("DOUBLE")){
-            elem1 = Double.parseDouble(s);
-            elem2 = Double.parseDouble(this.value);
-        }
-        else{
-            elem1 = s;
-            elem2 = this.value;
-        }
-
-        if(this.sign.equals("LIKE"))
-            if(elem2 instanceof String) {
-                Pattern pattern = Pattern.compile((String) elem2);
-                Matcher matcher = pattern.matcher((String)elem1);
-                return matcher.find();
-            } else{
-                throw new Exception("Error! "+elem2.toString()+" cannot be used for a pattern");
-            }
-        return true;
-    }
-
     public void validateValue(String type) throws Exception {
         if(type.equals("INT")) {
             int value = Integer.parseInt(this.value);
@@ -75,13 +38,43 @@ public class Condition {
         }
         if(type.contains("varchar")){
             int j = 8;
-            String reqSize="";
+            StringBuilder reqSize= new StringBuilder();
             while(type.charAt(j)>='0' && type.charAt(j)<='9'){
-                reqSize+=type.charAt(j);
+                reqSize.append(type.charAt(j));
                 j++;
             }
-            if(this.value.length()>Integer.parseInt(reqSize))
+            if(this.value.length()>Integer.parseInt(reqSize.toString()))
                 throw new Exception("varchar length condition not respected!");
         }
+    }
+
+    public Object parseValue(String type) throws Exception {
+        String sqlType = type.toUpperCase();
+        if (type.equals("INT")) {
+            try {
+                return Integer.parseInt(value);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Value '" + value + "' is not a valid INTEGER.");
+            }
+        }
+        else if (type.equals("FLOAT")) {
+            try {
+                return Float.parseFloat(value);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Value '" + value + "' is not a valid FLOAT.");
+            }
+        }
+        else if (type.equals("DOUBLE")) {
+            try {
+                return Double.parseDouble(value);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Value '" + value + "' is not a valid FLOAT.");
+            }
+        }
+        else if (type.contains("VARCHAR")) {
+            return value;
+        }
+
+        return value;
     }
 }

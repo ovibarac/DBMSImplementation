@@ -72,6 +72,24 @@
           </IndexFile>
         </IndexFiles>
       </Table>
+      <Table fileName="Products.kv" tableName="Products">
+        <Structure>
+          <Attribute attributeName="productId" type="INT"/>
+          <Attribute attributeName="name" type="varchar(20)"/>
+          <Attribute attributeName="price" type="INT"/>
+          <Attribute attributeName="color" type="varchar(20)"/>
+        </Structure>
+        <primaryKey>
+          <pkAttribute>productId</pkAttribute>
+        </primaryKey>
+        <IndexFiles>
+          <IndexFile indexName="idx_product_price.ind" indexType="BTree" isUnique="0">
+            <IndexAttributes>
+              <IAttribute>price</IAttribute>
+            </IndexAttributes>
+          </IndexFile>
+        </IndexFiles>
+      </Table>
     </Tables>
   </DataBase>
-</Databases>
+</Databases>

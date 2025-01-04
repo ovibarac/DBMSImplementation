@@ -45,6 +45,10 @@ public class SQLCommandParser {
       return handleInsertTable(sqlCommand, tblService);
     }
 
+    if (sqlCommand.matches("1M")) {
+      return handleInsertOneMillionProducts(sqlCommand, tblService);
+    }
+
     if (sqlCommand.matches("(?i)DELETE FROM .*")) {
       return handleDeleteFromTable(sqlCommand, tblService);
     }
@@ -225,6 +229,47 @@ public class SQLCommandParser {
     }
   }
 
+  private String handleInsertOneMillionProducts(String sqlCommand, TableService tableService) {
+    try {
+      String tableName = "Products";
+      for (int i = 1; i <= 1000000; i++) {
+        String name = randomString(3);
+        String color = randomColor();
+        int price = randomPrice();
+        List<String> columns = Arrays.asList(
+                String.valueOf(i),
+                name,
+                String.valueOf(price),
+                color
+        );
+        String response = tableService.insertRegisterService(tableName, columns);
+      }
+
+      return "Successfully inserted 1,000,000 products.";
+    } catch (Exception e) {
+      return "Error inserting: " + e.getMessage();
+    }
+  }
+
+  private String randomString(int length) {
+    String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    StringBuilder randomString = new StringBuilder();
+    for (int i = 0; i < length; i++) {
+      int index = (int) (characters.length() * Math.random());
+      randomString.append(characters.charAt(index));
+    }
+    return randomString.toString();
+  }
+
+  private String randomColor() {
+    String[] colors = {"Red", "Green", "Blue", "Yellow", "Black", "White", "Pink", "Purple", "Orange", "Brown"};
+    return colors[(int) (Math.random() * colors.length)];
+  }
+
+  private int randomPrice() {
+    return (int) (Math.random() * 10000) + 1;
+  }
+
   private String handleDeleteFromTable(String sqlCommand, TableService tableService) {
     try {
       Pattern pattern = Pattern.compile("(?i)DELETE FROM (\\w+) WHERE id = (\\d+);?");
@@ -248,7 +293,7 @@ public class SQLCommandParser {
   private String handleSelectionFromTable(String sqlCommand, TableService tableService) {
     try {
       boolean distinct = sqlCommand.matches("(?i)SELECT DISTINCT .*");
-      Pattern pattern = Pattern.compile("(?i)SELECT (DISTINCT )?(.+) FROM (.+) WHERE (.+)");
+      Pattern pattern = Pattern.compile("(?i)SELECT (DISTINCT )?(.+) FROM (.+) WHERE (.+);?");
       Matcher matcher = pattern.matcher(sqlCommand);
 
       if(!matcher.find())
@@ -263,7 +308,9 @@ public class SQLCommandParser {
       List<Condition> conditionList = parseConditions(conditions,tableList);
 
       String response = tableService.selectService(tableList,columnList,conditionList,distinct);
-      System.out.println(response);
+      System.out.println(String.join("\n", Arrays.stream(response.split("\\|")).toList()));
+
+
       return response;
     } catch (Exception e) {
       return "Error selection: " + e.getMessage();
@@ -311,7 +358,7 @@ public class SQLCommandParser {
         if(!tables.contains(column.split("\\.")[0]))
           throw new Exception("Invalid SELECT sintax (column error in a condition!)");
       }
-      List<String> signs = List.of("=","LIKE",">","<");
+      List<String> signs = List.of("=","LIKE",">","<","<=",">=");
       String sign = c.getSign();
       if(!signs.contains(sign))
         throw new Exception("Invalid SELECT sintax (invalid sign in a condition!)");

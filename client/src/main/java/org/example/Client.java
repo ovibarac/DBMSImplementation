@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.Arrays;
 import java.util.Scanner;
 
 public class Client {
@@ -31,7 +32,7 @@ public class Client {
         }
 
         String response = receiveResponse(input);
-        System.out.println(response);
+        System.out.println(String.join("\n", Arrays.stream(response.split("\\|")).toList()));
       }
 
       scanner.close();

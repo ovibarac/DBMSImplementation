@@ -8,8 +8,8 @@ import org.example.model.Condition;
 import org.example.model.ForeignKey;
 import org.example.repo.TableRepository;
 
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Stream;
 
 public class TableService {
 
@@ -228,17 +228,97 @@ public class TableService {
   }
 
   public String selectService(List<String> tables, List<String> columns, List<Condition> conditions, boolean distinct){
-    String response;
+    String response="";
+
     try {
       MongoDatabase db = DatabaseContext.getDBConnection();
       String databaseName = DatabaseContext.getCurrentDatabase();
-
       validateSelect(databaseName,tables,columns,conditions);
 
-      response = "good";
+      if(tables.size()==1) {
+        //For one table
+        String t = tables.get(0);
+        List<List<String>> idsByCondition = new ArrayList<>();
+
+        for (Condition condition : conditions) {
+          //Identify applicable indexes for column
+          List<String> indexes = tableRepository.findIndexesForColumn(databaseName, t, condition.getColumn());
+          List<String> attr = tableRepository.getTableStructure(databaseName,t);
+          String type = findColumnInStructure(attr,condition.getColumn());
+
+          if(type==null)
+            throw new Exception("Column " + condition.getColumn() + " does not exist in table " + t);
+
+          if(tableRepository.isPrimaryKey(databaseName, t, condition.getColumn())){
+            //Use default index
+            List<org.bson.Document> filteredItems = tableRepository.findAllByIdCondition(t, db, condition, type);
+            List<String> itemIds = filteredItems.stream()
+                    .map(doc -> doc.get("_id").toString())
+                    .filter(Objects::nonNull)
+                    .toList();
+
+            idsByCondition.add(itemIds);
+          } else if(!indexes.isEmpty()){
+            //Use index
+            List<org.bson.Document> filteredItems = tableRepository.findAllByIdCondition(indexes.get(0), db, condition, type);
+            List<String> itemIds = filteredItems.stream()
+                    .map(doc -> doc.get("value"))
+                    .filter(Objects::nonNull)
+                    .flatMap(value -> Arrays.stream(value.toString().split("#")))
+                    .toList();
+
+            idsByCondition.add(itemIds);
+          }else{
+            //Table scan and filter
+            List<org.bson.Document> filteredItems = tableRepository.findAllByColumnCondition(t, databaseName, db, condition);
+
+            List<String> itemIds = filteredItems.stream()
+                    .map(doc -> doc.get("_id").toString())
+                    .filter(Objects::nonNull)
+                    .toList();
+
+            idsByCondition.add(itemIds);
+          }
+        }
+
+        //Get common results from all conditions
+        Set<String> commonIds = idsByCondition.stream()
+                .map(HashSet::new)
+                .reduce((set1, set2) -> {
+                  set1.retainAll(set2);
+                  return set1;
+                })
+                .orElse(new HashSet<>());
+
+        List<org.bson.Document> entries = commonIds.stream()
+                .map(entryId -> tableRepository.findRegisterbyId(t, db, entryId))
+                .toList();
+
+        //Apply projections
+        List<List<String>> projectedEntries = tableRepository.applyProjectionsToEntries(databaseName, t, columns, entries);
+
+        //Apply distinct
+        if(distinct){
+          Set<List<String>> distinctSet = new HashSet<>(projectedEntries);
+          projectedEntries = new ArrayList<>(distinctSet);
+        }
+
+        return String.join(
+                "|",
+                Stream.concat(
+                        Stream.of(String.join(",", columns)),
+                        projectedEntries.stream().map(line -> String.join(",", line))
+                ).toList()
+        );
+      }
+      else {
+        //TODO for multiple tables
+      }
+
     } catch (Exception e) {
       response = e.getMessage();
     }
+
     return response;
   }
 }
