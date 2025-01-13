@@ -3,6 +3,7 @@ package org.example;
 import org.example.model.Column;
 import org.example.model.Condition;
 import org.example.model.ForeignKey;
+import org.example.model.JoinCondition;
 import org.example.services.DatabaseService;
 import org.example.services.IndexService;
 import org.example.services.TableService;
@@ -230,25 +231,29 @@ public class SQLCommandParser {
   }
 
   private String handleInsertOneMillionProducts(String sqlCommand, TableService tableService) {
-    try {
-      String tableName = "Products";
-      for (int i = 1; i <= 1000000; i++) {
-        String name = randomString(3);
-        String color = randomColor();
-        int price = randomPrice();
-        List<String> columns = Arrays.asList(
-                String.valueOf(i),
-                name,
-                String.valueOf(price),
-                color
-        );
-        String response = tableService.insertRegisterService(tableName, columns);
+      String tableName = "Orders";
+      int i = 1;
+      while(i <= 40655) {
+        try {
+          int id1 = randomPrice();
+          int id2 = randomId();
+          int quantity = (int) (Math.random() * 20) +1;
+          //String passwd = randomString(10);
+          //String color = randomColor();
+          //int price = randomPrice();
+          List<String> columns = Arrays.asList(
+                  String.valueOf(i),
+                  Integer.toString(id1),
+                  Integer.toString(id2),
+                  Integer.toString(quantity)
+          );
+          String response = tableService.insertRegisterService(tableName, columns);
+          i+=1;
+        } catch (Exception e){
+          String response = e.getMessage();
+        }
       }
-
       return "Successfully inserted 1,000,000 products.";
-    } catch (Exception e) {
-      return "Error inserting: " + e.getMessage();
-    }
   }
 
   private String randomString(int length) {
@@ -267,7 +272,11 @@ public class SQLCommandParser {
   }
 
   private int randomPrice() {
-    return (int) (Math.random() * 10000) + 1;
+    return (int) (Math.random() * 100000) + 1;
+  }
+
+  private int randomId() {
+    return (int) (Math.random() * 1000000) +1;
   }
 
   private String handleDeleteFromTable(String sqlCommand, TableService tableService) {
@@ -293,21 +302,37 @@ public class SQLCommandParser {
   private String handleSelectionFromTable(String sqlCommand, TableService tableService) {
     try {
       boolean distinct = sqlCommand.matches("(?i)SELECT DISTINCT .*");
-      Pattern pattern = Pattern.compile("(?i)SELECT (DISTINCT )?(.+) FROM (.+) WHERE (.+);?");
+      Pattern pattern = Pattern.compile("(?i)SELECT (DISTINCT )?(.+) FROM (.+) WHERE (.+) JOIN (.+) ON (.+);?");
       Matcher matcher = pattern.matcher(sqlCommand);
+      String joinCondition = "";
+      String tableJoin = "";
 
-      if(!matcher.find())
-        return "Invalid SELECT sintax";
+      if(!matcher.find()) {
+        pattern = Pattern.compile("(?i)SELECT (DISTINCT )?(.+) FROM (.+) WHERE (.+);?");
+        matcher = pattern.matcher(sqlCommand);
+        if(!matcher.find())
+          return "Invalid SELECT sintax";
+      }
+      else{
+        tableJoin = matcher.group(5);
+        joinCondition = matcher.group(6);
+      }
 
       String columns = matcher.group(2);
       String tables = matcher.group(3);
       String conditions = matcher.group(4);
 
       List<String> tableList = parseTables(tables);
-      List<String> columnList = parseColumns(columns,tableList);
-      List<Condition> conditionList = parseConditions(conditions,tableList);
+      JoinCondition jcond;
+      if(!joinCondition.isEmpty())
+        jcond = parseJoin(tableList,tableJoin,joinCondition);
+      else
+        jcond = null;
 
-      String response = tableService.selectService(tableList,columnList,conditionList,distinct);
+      List<String> columnList = parseColumns(columns,tableList);
+      List<Condition> conditionList = parseConditions(conditions,tableList,jcond);
+
+      String response = tableService.selectService(tableList,columnList,conditionList,distinct,jcond);
       System.out.println(String.join("\n", Arrays.stream(response.split("\\|")).toList()));
 
 
@@ -345,25 +370,73 @@ public class SQLCommandParser {
     return rez;
   }
 
-  private List<Condition> parseConditions (String conditions, List<String> tables) throws Exception {
+  private List<Condition> parseConditions (String conditions, List<String> tables, JoinCondition jcond) throws Exception {
     List<Condition> rez = new ArrayList<>();
     String[] cond = conditions.split("AND");
     for(int i=0 ; i<cond.length ; i++){
+      int joinCondition = 0;
       if(cond[i].charAt(0)==' ')
         cond[i] = cond[i].substring(1);
       Condition c = new Condition(cond[i]);
       if(tables.size()>1)
       {
         String column = c.getColumn();
-        if(!tables.contains(column.split("\\.")[0]))
+        int index1 = tables.indexOf(column.split("\\.")[0]);
+        if(index1==-1)
           throw new Exception("Invalid SELECT sintax (column error in a condition!)");
+        String column1 = c.getColumn().split("\\.")[1];
+        String column2 = "";
+        if(c.getValue().split("\\.").length == 2)
+          column2 = c.getValue().split("\\.")[1];
+        if(column1.equals(column2))
+        {
+          if(jcond!=null)
+            throw new Exception("Invalid SELECT sintax (multiple join conditions detected");
+          if(!c.getSign().equals("="))
+            throw new Exception("Invalid SELECT sintax (invalid sign in the join condition!)");
+          joinCondition = 1;
+          String value = c.getValue();
+          int index2 = tables.indexOf(value.split("\\.")[1]);
+          if(index2==-1)
+            throw new Exception("Invalid SELECT sintax (column error in the join condition!)");
+          jcond = new JoinCondition(tables.get(index1-1),tables.get(index2-1),column1);
+        }
       }
       List<String> signs = List.of("=","LIKE",">","<","<=",">=");
       String sign = c.getSign();
       if(!signs.contains(sign))
         throw new Exception("Invalid SELECT sintax (invalid sign in a condition!)");
-      rez.add(c);
+      if(joinCondition==0)
+        rez.add(c);
     }
     return rez;
+  }
+
+  private JoinCondition parseJoin (List<String> tables, String tableJoin, String joinCondition) throws Exception{
+    if(tables.size()!=2)
+      throw new Exception("Invalid SELECT sintax (when using JOIN command, only one table is allowed on FROM selection and it needs a variable!)");
+    if(tableJoin.charAt(0)==' ')
+      tableJoin = tableJoin.substring(1);
+    if(joinCondition.charAt(0)==' ')
+      joinCondition = joinCondition.substring(1);
+    String[] table_params = tableJoin.split(" ");
+    String[] params = joinCondition.split(" ");
+    if(params.length != 3)
+      throw new Exception("Invalid join condition: "+joinCondition);
+    if(table_params.length != 2)
+      throw new Exception("Invalid table join: "+tableJoin);
+    if(!params[1].equals("="))
+      throw new Exception("Invalid SELECT sintax (invalid sign in the join condition!)");
+    if(!params[0].split("\\.")[0].equals(tables.get(1)))
+      throw new Exception("Invalid SELECT sintax (table mismatch on join condition!)");
+    if(!params[2].split("\\.")[0].equals(table_params[1]))
+      throw new Exception("Invalid SELECT sintax (table mismatch on join condition!)");
+    String column1 = params[0].split("\\.")[1];
+    String column2 = params[2].split("\\.")[1];
+    if(!column1.equals(column2))
+      throw new Exception("Invalid SELECT sintax (invalid column equality on join condition!)");
+    tables.add(table_params[0]);
+    tables.add(table_params[1]);
+    return new JoinCondition(tables.get(0),table_params[0],column1);
   }
 }

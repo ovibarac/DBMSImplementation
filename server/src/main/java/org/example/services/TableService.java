@@ -6,6 +6,7 @@ import org.bson.Document;
 import org.example.model.Column;
 import org.example.model.Condition;
 import org.example.model.ForeignKey;
+import org.example.model.JoinCondition;
 import org.example.repo.TableRepository;
 
 import java.util.*;
@@ -194,7 +195,7 @@ public class TableService {
     return null;
   }
 
-  private void validateSelect(String database, List<String> tables, List<String> columns, List<Condition> conditions) throws Exception {
+  private void validateSelect(String database, List<String> tables, List<String> columns, List<Condition> conditions, JoinCondition jcond) throws Exception {
     if(tables.size()==1)
     {
       String t = tables.get(0);
@@ -225,15 +226,27 @@ public class TableService {
         c.validateValue(type);
       }
     }
+    if(jcond!=null)
+    {
+      String table1 = jcond.getTable1();
+      String table2 = jcond.getTable2();
+      List<String> attr1 = tableRepository.getTableStructure(database, table1);
+      List<String> attr2 = tableRepository.getTableStructure(database, table2);
+      String column = jcond.getColumn();
+      if(findColumnInStructure(attr1,column)==null)
+        throw new Exception("Column " + column + " does not exist in table " + table1);
+      if(findColumnInStructure(attr2,column)==null)
+        throw new Exception("Column " + column + " does not exist in table " + table2);
+    }
   }
 
-  public String selectService(List<String> tables, List<String> columns, List<Condition> conditions, boolean distinct){
+  public String selectService(List<String> tables, List<String> columns, List<Condition> conditions, boolean distinct, JoinCondition jcond){
     String response="";
 
     try {
       MongoDatabase db = DatabaseContext.getDBConnection();
       String databaseName = DatabaseContext.getCurrentDatabase();
-      validateSelect(databaseName,tables,columns,conditions);
+      validateSelect(databaseName,tables,columns,conditions,jcond);
 
       if(tables.size()==1) {
         //For one table
