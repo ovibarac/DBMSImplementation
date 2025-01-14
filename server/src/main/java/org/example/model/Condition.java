@@ -26,6 +26,10 @@ public class Condition {
         return value;
     }
 
+    public void setColumn(String column) {
+        this.column = column;
+    }
+
     public void validateValue(String type) throws Exception {
         if(type.equals("INT")) {
             int value = Integer.parseInt(this.value);

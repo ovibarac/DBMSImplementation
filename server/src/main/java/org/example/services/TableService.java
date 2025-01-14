@@ -195,7 +195,7 @@ public class TableService {
     return null;
   }
 
-  private void validateSelect(String database, List<String> tables, List<String> columns, List<Condition> conditions, JoinCondition jcond) throws Exception {
+  private void validateSelect(String database, List<String> tables, List<String> columns, List<Condition> conditions, List<JoinCondition> jcondList) throws Exception {
     if(tables.size()==1)
     {
       String t = tables.get(0);
@@ -226,7 +226,7 @@ public class TableService {
         c.validateValue(type);
       }
     }
-    if(jcond!=null)
+    for(JoinCondition jcond : jcondList)
     {
       String table1 = jcond.getTable1();
       String table2 = jcond.getTable2();
@@ -240,13 +240,13 @@ public class TableService {
     }
   }
 
-  public String selectService(List<String> tables, List<String> columns, List<Condition> conditions, boolean distinct, JoinCondition jcond){
+  public String selectService(List<String> tables, List<String> columns, List<Condition> conditions, boolean distinct, List<JoinCondition> jcondList){
     String response="";
 
     try {
       MongoDatabase db = DatabaseContext.getDBConnection();
       String databaseName = DatabaseContext.getCurrentDatabase();
-      validateSelect(databaseName,tables,columns,conditions,jcond);
+      validateSelect(databaseName,tables,columns,conditions,jcondList);
 
       if(tables.size()==1) {
         //For one table
@@ -325,7 +325,72 @@ public class TableService {
         );
       }
       else {
-        //TODO for multiple tables
+        List<List<List<String>>> TablesConditionFilter = new ArrayList<>();
+        for(int i=0 ; i<tables.size() ; i+=2)
+          TablesConditionFilter.add(new ArrayList<>());
+
+        for(Condition condition : conditions){
+          String t = condition.getColumn().split("\\.")[0];
+          String column = condition.getColumn().split("\\.")[1];
+          condition.setColumn(column);
+          int index = tables.indexOf(t);
+          int list_index = index/2;
+          String table = tables.get(index-1);
+
+          List<String> indexes = tableRepository.findIndexesForColumn(databaseName, table, condition.getColumn());
+          List<String> attr = tableRepository.getTableStructure(databaseName,table);
+          String type = findColumnInStructure(attr, condition.getColumn());
+
+          if(type==null)
+            throw new Exception("Column " + condition.getColumn() + " does not exist in table " + table);
+
+          if(tableRepository.isPrimaryKey(databaseName, table, column)){
+            List<org.bson.Document> filteredItems = tableRepository.findAllByIdCondition(table, db, condition, type);
+            List<String> itemIds = filteredItems.stream()
+                    .map(doc -> doc.get("_id").toString())
+                    .filter(Objects::nonNull)
+                    .toList();
+
+            TablesConditionFilter.get(list_index).add(itemIds);
+          } else if(!indexes.isEmpty()){
+            List<org.bson.Document> filteredItems = tableRepository.findAllByIdCondition(indexes.get(0), db, condition, type);
+            List<String> itemIds = filteredItems.stream()
+                    .map(doc -> doc.get("value"))
+                    .filter(Objects::nonNull)
+                    .flatMap(value -> Arrays.stream(value.toString().split("#")))
+                    .toList();
+
+            TablesConditionFilter.get(list_index).add(itemIds);
+          }else{
+            List<org.bson.Document> filteredItems = tableRepository.findAllByColumnCondition(table, databaseName, db, condition);
+
+            List<String> itemIds = filteredItems.stream()
+                    .map(doc -> doc.get("_id").toString())
+                    .filter(Objects::nonNull)
+                    .toList();
+
+            TablesConditionFilter.get(list_index).add(itemIds);
+          }
+        }
+
+        List<List<org.bson.Document>> finalTables = new ArrayList<>();
+
+        for(int i = 0 ; i<TablesConditionFilter.size(); i++) {
+          List<List<String>> tableResult = TablesConditionFilter.get(i);
+          Set<String> commonIds = tableResult.stream()
+                  .map(HashSet::new)
+                  .reduce((set1, set2) -> {
+                    set1.retainAll(set2);
+                    return set1;
+                  })
+                  .orElse(new HashSet<>());
+          int finalI = i;
+          List<org.bson.Document> entries = commonIds.stream()
+                  .map(entryId -> tableRepository.findRegisterbyId(tables.get(finalI *2), db, entryId))
+                  .toList();
+          finalTables.add(entries);
+        }
+        tableRepository.createTemporaryTables(db,databaseName,finalTables,jcondList.get(0));
       }
 
     } catch (Exception e) {

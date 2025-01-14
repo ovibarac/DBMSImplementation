@@ -4,6 +4,7 @@ import com.mongodb.client.*;
 import org.example.model.Column;
 import org.example.model.Condition;
 import org.example.model.ForeignKey;
+import org.example.model.JoinCondition;
 import org.example.utils.DatabaseXmlUtil;
 import org.example.utils.IndexXmlUtil;
 import org.example.utils.TableXmlUtil;
@@ -516,6 +517,47 @@ public class TableRepository {
           if(elem!=null)
             throw new Exception("Register violates unique constraint on index file "+indexes.get(0)+" for column "+column);
         }
+    }
+  }
+
+  //pentru a lucra doar cu datele filtrate, vom crea 2 fisiere temporare pentru a le stoca, vor fi sterse ulterior dupa finalizare
+  public void createTemporaryTables(MongoDatabase db, String databaseName, List<List<org.bson.Document>> finalTables, JoinCondition jcond) throws Exception {
+    for(int i=0 ; i<finalTables.size() ; i++) {
+      List<org.bson.Document> l = finalTables.get(i);
+      int index;
+      String temp_table;
+      if(i==0) {
+        temp_table = "temp" + jcond.getTable1();
+        index = getColumnPositionInTableStructure(databaseName, jcond.getTable1(), jcond.getColumn());
+      }
+      else {
+        temp_table = "temp" + jcond.getTable2();
+        index = getColumnPositionInTableStructure(databaseName, jcond.getTable2(), jcond.getColumn());
+      }
+      db.createCollection(temp_table);
+      MongoCollection<org.bson.Document> tempCollection = db.getCollection(temp_table);
+      /**
+       * daca index = 0, atunci atat _id, cat si value vor avea valoarea cheii primare, pentru a pastra aceeasi logica
+       * daca index > 0, se scade 1 si se ia valoarea din value dupa split pentru _id si cheia primara asociata pentru
+       * value
+       */
+      for(int j=0 ; j<l.size() ; j++) {
+        String id = l.get(j).getString("_id");
+        if (index == 0) {
+          tempCollection.insertOne(new org.bson.Document("_id", id).append("value", id));
+        } else {
+          String value = l.get(j).getString("value");
+          String col_value = value.split("#")[index-1];
+
+          org.bson.Document d = findRegisterbyId(temp_table, db, col_value);
+          if (d != null) {
+            String updated = d.getString("value");
+            tempCollection.updateOne(eq("_id", col_value), set("value", updated + "#" + id));
+          } else
+            tempCollection.insertOne(new org.bson.Document("_id", col_value).append("value", id));
+        }
+      }
+      //sortarea e returnata ca un iterator, deci o vom aplica direct in algoritmi
     }
   }
 }

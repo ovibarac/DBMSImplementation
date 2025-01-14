@@ -323,16 +323,17 @@ public class SQLCommandParser {
       String conditions = matcher.group(4);
 
       List<String> tableList = parseTables(tables);
+      List<JoinCondition> jcondList = new ArrayList<>();
       JoinCondition jcond;
-      if(!joinCondition.isEmpty())
-        jcond = parseJoin(tableList,tableJoin,joinCondition);
-      else
-        jcond = null;
+      if(!joinCondition.isEmpty()) {
+        jcond = parseJoin(tableList, tableJoin, joinCondition);
+        jcondList.add(jcond);
+      }
 
       List<String> columnList = parseColumns(columns,tableList);
-      List<Condition> conditionList = parseConditions(conditions,tableList,jcond);
+      List<Condition> conditionList = parseConditions(conditions,tableList,jcondList);
 
-      String response = tableService.selectService(tableList,columnList,conditionList,distinct,jcond);
+      String response = tableService.selectService(tableList,columnList,conditionList,distinct,jcondList);
       System.out.println(String.join("\n", Arrays.stream(response.split("\\|")).toList()));
 
 
@@ -370,7 +371,7 @@ public class SQLCommandParser {
     return rez;
   }
 
-  private List<Condition> parseConditions (String conditions, List<String> tables, JoinCondition jcond) throws Exception {
+  private List<Condition> parseConditions (String conditions, List<String> tables, List<JoinCondition> jcondList) throws Exception {
     List<Condition> rez = new ArrayList<>();
     String[] cond = conditions.split("AND");
     for(int i=0 ; i<cond.length ; i++){
@@ -390,8 +391,6 @@ public class SQLCommandParser {
           column2 = c.getValue().split("\\.")[1];
         if(column1.equals(column2))
         {
-          if(jcond!=null)
-            throw new Exception("Invalid SELECT sintax (multiple join conditions detected");
           if(!c.getSign().equals("="))
             throw new Exception("Invalid SELECT sintax (invalid sign in the join condition!)");
           joinCondition = 1;
@@ -399,7 +398,7 @@ public class SQLCommandParser {
           int index2 = tables.indexOf(value.split("\\.")[1]);
           if(index2==-1)
             throw new Exception("Invalid SELECT sintax (column error in the join condition!)");
-          jcond = new JoinCondition(tables.get(index1-1),tables.get(index2-1),column1);
+          jcondList.add(new JoinCondition(tables.get(index1-1),tables.get(index2-1),column1));
         }
       }
       List<String> signs = List.of("=","LIKE",">","<","<=",">=");
