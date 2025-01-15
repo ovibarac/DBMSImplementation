@@ -390,7 +390,23 @@ public class TableService {
                   .toList();
           finalTables.add(entries);
         }
+
         tableRepository.createTemporaryTables(db,databaseName,finalTables,jcondList.get(0));
+        List<List<String>> projectedEntries = tableRepository.MergeJoin(db,databaseName,tables,columns);
+        //List<List<String>> projectedEntries = tableRepository.NestedJoin(db,databaseName,tables,columns);
+
+        if(distinct){
+          Set<List<String>> distinctSet = new HashSet<>(projectedEntries);
+          projectedEntries = new ArrayList<>(distinctSet);
+        }
+
+        return String.join(
+                "|",
+                Stream.concat(
+                        Stream.of(String.join(",", columns)),
+                        projectedEntries.stream().map(line -> String.join(",", line))
+                ).toList()
+        );
       }
 
     } catch (Exception e) {

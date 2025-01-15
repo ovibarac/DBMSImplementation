@@ -44,6 +44,6 @@ Test commands:
     SELECT DISTINCT productId,name FROM Products WHERE name LIKE a
     SELECT productId,name,price,color FROM Products WHERE productId < 10000
 
-    SELECT DISTINCT u.username,o.quantity FROM Users u WHERE u.passwd LIKE a AND o.quantity > 10 AND o.quantity < 15 AND u.username LIKE d JOIN Orders o ON u.userId = o.userId
+    SELECT u.userId,u.username,o.quantity FROM Users u WHERE u.passwd LIKE a AND o.quantity > 10 AND o.quantity < 15 AND u.username LIKE d JOIN Orders o ON u.userId = o.userId
 
 Result in `db_schema.xml`

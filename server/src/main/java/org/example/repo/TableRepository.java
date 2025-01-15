@@ -1,6 +1,7 @@
 package org.example.repo;
 
 import com.mongodb.client.*;
+import com.mongodb.client.model.Sorts;
 import org.example.model.Column;
 import org.example.model.Condition;
 import org.example.model.ForeignKey;
@@ -559,5 +560,78 @@ public class TableRepository {
       }
       //sortarea e returnata ca un iterator, deci o vom aplica direct in algoritmi
     }
+  }
+
+  //se poate folosi functia pt ambii algoritmi de join
+  public List<List<String>> getCombinationsFromDocs(MongoDatabase db, String databaseName, String value1, String value2, List<String> tables, List<String> columns) throws Exception {
+    List<List<String>> results = new ArrayList<>();
+    int size1 = getTableStructure(databaseName,tables.get(0)).size();
+
+    List<Integer> positions = new ArrayList<>();
+    for(String column : columns){
+      String t = column.split("\\.")[0];
+      String c = column.split("\\.")[1];
+      int index = tables.indexOf(t)-1;
+      if(index==0)
+        positions.add(getColumnPositionInTableStructure(databaseName,tables.get(0),c));
+      else
+        positions.add(size1+getColumnPositionInTableStructure(databaseName,tables.get(2),c));
+    }
+
+    String[] ids1 = value1.split("#");
+    String[] ids2 = value2.split("#");
+    for(int i=0 ; i<ids1.length ; i++)
+    {
+      org.bson.Document d1 = findRegisterbyId(tables.get(0),db,ids1[i]);
+      for(int j=0 ; j<ids2.length ; j++) {
+        org.bson.Document d2 = findRegisterbyId(tables.get(2), db, ids2[j]);
+
+        String merged = d1.getString("_id")+"#"+d1.getString("value")+"#"+d2.getString("_id")+"#"+d2.getString("value");
+        List<String> row = new ArrayList<>();
+        String[] elems = merged.split("#");
+
+        for(int poz : positions)
+          row.add(elems[poz]);
+        results.add(row);
+      }
+    }
+    return results;
+  }
+
+  public List<List<String>> MergeJoin(MongoDatabase db, String databaseName, List<String> tables, List<String> columns) throws Exception {
+    List<List<String>> results= new ArrayList<>();
+
+    MongoCollection<org.bson.Document> temp1 = db.getCollection("temp"+tables.get(0));
+    MongoCollection<org.bson.Document> temp2 = db.getCollection("temp"+tables.get(2));
+
+    //colectiile sortate
+    MongoCursor<org.bson.Document> sorted1 = temp1.find().sort(Sorts.ascending("_id")).iterator();
+    MongoCursor<org.bson.Document> sorted2 = temp2.find().sort(Sorts.ascending("_id")).iterator();
+
+    org.bson.Document doc1 = sorted1.hasNext() ? sorted1.next() : null;
+    org.bson.Document doc2 = sorted2.hasNext() ? sorted2.next() : null;
+
+    //interclasare
+    while(doc1!=null && doc2!=null){
+      String id1 = doc1.getString("_id");
+      String id2 = doc2.getString("_id");
+
+      //o singura pereche de _id ar putea egale deoarece in index file id-urile care contin aceeasi valoare
+      //sunt stocate impreuna
+      if(id1.equals(id2)){
+        results.addAll(getCombinationsFromDocs(db,databaseName,doc1.getString("value"),doc2.getString("value"),tables,columns));
+        doc1 = sorted1.hasNext() ? sorted1.next() : null;
+        doc2 = sorted2.hasNext() ? sorted2.next() : null;
+      }
+      else if(id1.compareTo(id2)<0)
+        doc1 = sorted1.hasNext() ? sorted1.next() : null;
+      else
+        doc2 = sorted2.hasNext() ? sorted2.next() : null;
+    }
+
+    //eliminarea colectiilor temporare
+    temp1.drop();
+    temp2.drop();
+    return results;
   }
 }
