@@ -392,8 +392,8 @@ public class TableService {
         }
 
         tableRepository.createTemporaryTables(db,databaseName,finalTables,jcondList.get(0));
-        List<List<String>> projectedEntries = tableRepository.MergeJoin(db,databaseName,tables,columns);
-        //List<List<String>> projectedEntries = tableRepository.NestedJoin(db,databaseName,tables,columns);
+//        List<List<String>> projectedEntries = tableRepository.MergeJoin(db,databaseName,tables,columns);
+        List<List<String>> projectedEntries = tableRepository.NestedJoin(db,databaseName,tables,columns);
 
         if(distinct){
           Set<List<String>> distinctSet = new HashSet<>(projectedEntries);

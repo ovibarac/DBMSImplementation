@@ -1,6 +1,9 @@
 package org.example.repo;
 
-import com.mongodb.client.*;
+import com.mongodb.client.AggregateIterable;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoCursor;
+import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Sorts;
 import org.example.model.Column;
 import org.example.model.Condition;
@@ -634,4 +637,30 @@ public class TableRepository {
     temp2.drop();
     return results;
   }
+
+  public List<List<String>> NestedJoin(MongoDatabase db, String databaseName, List<String> tables, List<String> columns) throws Exception {
+    List<List<String>> results = new ArrayList<>();
+
+    MongoCollection<org.bson.Document> outerTable = db.getCollection("temp" + tables.get(0));
+    String innerTableName = "temp" + tables.get(2);
+    MongoCollection<org.bson.Document> innerTable = db.getCollection(innerTableName);
+
+    for (org.bson.Document outerRow : outerTable.find()) {
+      String outerId = outerRow.getString("_id");
+      String outerValue = outerRow.getString("value");
+
+      List<org.bson.Document> indexedRows = findAllByIdCondition(innerTableName, db, new Condition("_id = " + outerId), "INT");
+
+      for (org.bson.Document innerRow : indexedRows) {
+        String innerValue = innerRow.getString("value");
+        results.addAll(getCombinationsFromDocs(db,databaseName,outerValue, innerValue,tables,columns));
+      }
+    }
+
+    outerTable.drop();
+    innerTable.drop();
+
+    return results;
+  }
+
 }
